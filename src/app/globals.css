@@ -1,0 +1,125 @@
+@import "tailwindcss";
+
+@theme {
+  --color-pkp-black: #000000;
+  --color-pkp-white: #ffffff;
+  --color-pkp-red: #b31942;
+  --color-pkp-red-dark: #8f1234;
+  --color-pkp-red-muted: #fdf2f5;
+  --color-pkp-gray-50: #f7f7f7;
+  --color-pkp-gray-100: #efefef;
+  --color-pkp-gray-200: #e0e0e0;
+  --color-pkp-gray-300: #c8c8c8;
+  --color-pkp-gray-400: #9a9a9a;
+  --color-pkp-gray-500: #6b6b6b;
+  --color-pkp-gray-600: #4a4a4a;
+  --color-pkp-gray-700: #333333;
+  --color-pkp-gray-800: #1a1a1a;
+  --color-pkp-gray-900: #0d0d0d;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.04), 0 4px 16px -2px rgb(0 0 0 / 0.06);
+  --shadow-card-hover: 0 4px 20px -4px rgb(0 0 0 / 0.12);
+  --shadow-brand: 0 8px 30px -8px rgb(179 25 66 / 0.25);
+  --radius-card: 0.875rem;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-pkp-gray-50 text-pkp-black antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  ::selection {
+    @apply bg-pkp-red/20 text-pkp-black;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply tracking-tight text-pkp-black;
+  }
+}
+
+@layer utilities {
+  .pkp-accent-bar {
+    @apply h-1 w-10 rounded-full bg-pkp-red;
+  }
+
+  .pkp-section-label {
+    @apply text-[11px] font-bold uppercase tracking-[0.18em] text-pkp-red;
+  }
+
+  .pkp-card-accent {
+    @apply relative overflow-hidden before:absolute before:left-0 before:top-0 before:h-full before:w-1 before:bg-pkp-red before:content-[''];
+  }
+
+  .animate-progress {
+    animation: progress-fill 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.5s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.5s ease-out forwards;
+  }
+}
+
+@keyframes progress-fill {
+  from {
+    width: 0%;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media print {
+  aside,
+  header.lg\\:hidden,
+  nav.fixed,
+  .print\\:hidden {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  body {
+    background: white !important;
+  }
+
+  .athlete-report {
+    break-inside: avoid;
+  }
+
+  .athlete-report section {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+}
