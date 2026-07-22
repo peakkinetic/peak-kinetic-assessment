@@ -17,6 +17,8 @@ import type {
   AssessmentResult,
   AssessmentScore,
   Athlete,
+  AthleteGoal,
+  AthleteInjuryEntry,
   CreateAthleteInput,
   MetricItem,
   MovementScreenEntryInput,
@@ -59,18 +61,32 @@ import {
   type ProgressMilestoneView,
 } from "@/lib/progressMetrics";
 import {
+  buildAthleteGoals,
+  buildInjuryHistory,
+  profileDataToSaveInputs,
+} from "@/lib/athleteProfileData";
+import {
   createAthleteAction,
+  deleteAthleteAction,
   getSupabaseStatus,
   listAssessmentsForAthleteAction,
   listAthletesAction,
   startCoachSessionAction,
   updateAthleteAction,
+  updateAssessmentAction,
+  deleteAssessmentAction,
 } from "@/app/actions/coach";
 import {
   listAssessmentHistoryAction,
   listAssessmentResultsAction,
   saveAssessmentResultsAction,
 } from "@/app/actions/results";
+import { getCoachDisplayName } from "@/lib/coachAuthSession";
+import { isUuid } from "@/lib/uuid";
+import {
+  mergeRecordsById,
+  resolveActiveAssessment,
+} from "@/lib/sessionRecords";
 
 interface CoachSessionContextValue {
   athlete: Athlete | null;
@@ -86,8 +102,14 @@ interface CoachSessionContextValue {
   loadAthletes: () => Promise<void>;
   createAthlete: (input: CreateAthleteInput) => Promise<Athlete>;
   updateAthlete: (updates: Partial<Pick<Athlete, "height" | "weight" | "age">>) => Promise<Athlete>;
+  deleteAthlete: (athleteId: string) => Promise<void>;
   startSession: (athleteId: string, classificationId: string, label?: string) => Promise<void>;
   setActiveAssessmentId: (assessmentId: string) => void;
+  updateAssessment: (
+    assessmentId: string,
+    updates: Partial<Pick<AssessmentRecord, "label" | "status" | "coach">>
+  ) => Promise<AssessmentRecord>;
+  deleteAssessment: (assessmentId: string) => Promise<void>;
   endSession: () => void;
   includesModule: (moduleId: AssessmentModuleId) => boolean;
   activePerformanceTests: PerformanceTestId[];
@@ -97,6 +119,8 @@ interface CoachSessionContextValue {
   screeningJointMobility: JointMobilityMeasurement[];
   screeningSymmetryIndex: SymmetryIndexEntry[];
   screeningSessionNote: string | null;
+  athleteGoals: AthleteGoal[];
+  injuryHistory: AthleteInjuryEntry[];
   refreshAssessmentResults: () => Promise<void>;
   savePerformanceResults: (scores: Partial<Record<PerformanceTestId, number>>) => Promise<void>;
   saveMovementResults: (
@@ -106,6 +130,8 @@ interface CoachSessionContextValue {
     joints: Partial<Record<ScreeningMobilityId, ScreeningMobilityEntryInput>>;
     sessionNote?: string;
   }) => Promise<void>;
+  saveAthleteGoals: (goals: AthleteGoal[]) => Promise<void>;
+  saveInjuryHistory: (entries: AthleteInjuryEntry[]) => Promise<void>;
   assessmentHistory: AssessmentHistoryEntry[];
   progressTrackingMetrics: ProgressMetricView[];
   nationalRankProgress: NationalRankProgressView[];
@@ -161,6 +187,40 @@ function goToDashboard() {
   window.location.assign("/dashboard/athlete-profile");
 }
 
+async function loadAssessmentResultsForSession(
+  assessmentId: string,
+  supabaseConfigured: boolean
+): Promise<AssessmentResult[]> {
+  let cloudResults: AssessmentResult[] = [];
+
+  if (supabaseConfigured && isUuid(assessmentId)) {
+    try {
+      cloudResults = await listAssessmentResultsAction(assessmentId);
+    } catch {
+      cloudResults = [];
+    }
+  }
+
+  if (cloudResults.length > 0) {
+    return cloudResults;
+  }
+
+  if (localStore.isAvailable()) {
+    return localStore.listResultsForAssessment(assessmentId);
+  }
+
+  return [];
+}
+
+function mirrorModuleResults(
+  assessmentId: string,
+  moduleId: SaveAssessmentResultInput["moduleId"],
+  entries: SaveAssessmentResultInput[]
+) {
+  if (!localStore.isAvailable() || entries.length === 0) return;
+  localStore.upsertResults(assessmentId, moduleId, entries);
+}
+
 export function CoachSessionProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [athlete, setAthlete] = useState<Athlete | null>(null);
@@ -202,50 +262,68 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
 
     try {
       const localSnapshot = loadLocalSession();
-      setAthletes(localSnapshot.athletes);
-      setAthlete(localSnapshot.athlete);
-      setAssessments(localSnapshot.assessments);
-      setActiveAssessment(localSnapshot.activeAssessment);
-
-      if (localStore.isAvailable()) {
-        if (localSnapshot.activeAssessment) {
-          setAssessmentResults(
-            localStore.listResultsForAssessment(localSnapshot.activeAssessment.id)
-          );
-        }
-        if (localSnapshot.athlete) {
-          setAssessmentHistory(localStore.listAssessmentHistory(localSnapshot.athlete.id));
-        }
-      }
-
       const status = await getSupabaseStatus();
       setIsSupabaseConnected(status.configured);
+
+      let athletes = localSnapshot.athletes;
+      let athlete = localSnapshot.athlete;
+      let assessments = localSnapshot.assessments;
+      let activeAssessment = localSnapshot.activeAssessment;
 
       if (status.configured) {
         try {
           const athleteRows = await listAthletesAction();
-          setAthletes(athleteRows);
+          if (athleteRows.length > 0) {
+            athletes = athleteRows;
+          }
 
           const session = localStore.getSession();
-          if (session) {
-            const currentAthlete =
-              athleteRows.find((item) => item.id === session.athleteId) ??
-              localSnapshot.athlete;
-            const athleteAssessments = currentAthlete
-              ? await listAssessmentsForAthleteAction(currentAthlete.id)
-              : localSnapshot.assessments;
-            const assessment =
-              athleteAssessments.find((item) => item.id === session.assessmentId) ??
-              athleteAssessments[0] ??
-              localSnapshot.activeAssessment;
+          if (session?.athleteId && isUuid(session.athleteId)) {
+            athlete = athleteRows.find((item) => item.id === session.athleteId) ?? athlete;
 
-            setAthlete(currentAthlete);
-            setAssessments(athleteAssessments);
-            setActiveAssessment(assessment);
+            const cloudAssessments = athlete
+              ? await listAssessmentsForAthleteAction(athlete.id)
+              : [];
+            const localAssessments = localStore.isAvailable()
+              ? localStore.listAssessmentsForAthlete(session.athleteId)
+              : [];
+
+            assessments = mergeRecordsById(cloudAssessments, localAssessments);
+            activeAssessment = resolveActiveAssessment(
+              session.assessmentId,
+              assessments,
+              localSnapshot.activeAssessment
+            );
+
+            if (athlete && localStore.isAvailable()) {
+              localStore.syncAthlete(athlete);
+            }
+            if (localStore.isAvailable()) {
+              for (const assessment of assessments) {
+                localStore.syncAssessment(assessment);
+              }
+            }
           }
         } catch {
           // Keep local snapshot if Supabase is unreachable.
         }
+      }
+
+      setAthletes(athletes);
+      setAthlete(athlete);
+      setAssessments(assessments);
+      setActiveAssessment(activeAssessment);
+
+      if (activeAssessment) {
+        setAssessmentResults(
+          await loadAssessmentResultsForSession(activeAssessment.id, status.configured)
+        );
+      } else {
+        setAssessmentResults([]);
+      }
+
+      if (athlete && localStore.isAvailable()) {
+        setAssessmentHistory(localStore.listAssessmentHistory(athlete.id));
       }
     } finally {
       setIsLoading(false);
@@ -265,11 +343,13 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
     const status = await getSupabaseStatus();
     setIsSupabaseConnected(status.configured);
 
-    if (status.configured) {
+    if (status.configured && isUuid(athlete.id)) {
       try {
         const history = await listAssessmentHistoryAction(athlete.id);
-        setAssessmentHistory(history);
-        return;
+        if (history.length > 0) {
+          setAssessmentHistory(history);
+          return;
+        }
       } catch {
         // Fall back to local storage below.
       }
@@ -289,21 +369,12 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
     const status = await getSupabaseStatus();
     setIsSupabaseConnected(status.configured);
 
-    if (status.configured) {
-      try {
-        const results = await listAssessmentResultsAction(activeAssessment.id);
-        setAssessmentResults(results);
-        await refreshAssessmentHistory();
-        return;
-      } catch {
-        // Fall back to local storage below.
-      }
-    }
-
-    if (localStore.isAvailable()) {
-      setAssessmentResults(localStore.listResultsForAssessment(activeAssessment.id));
-      await refreshAssessmentHistory();
-    }
+    const results = await loadAssessmentResultsForSession(
+      activeAssessment.id,
+      status.configured
+    );
+    setAssessmentResults(results);
+    await refreshAssessmentHistory();
   }, [activeAssessment, refreshAssessmentHistory]);
 
   useEffect(() => {
@@ -349,12 +420,13 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
       const status = await getSupabaseStatus();
       setIsSupabaseConnected(status.configured);
 
-      if (status.configured) {
+      if (status.configured && isUuid(activeAssessment.id)) {
         const saved = await saveAssessmentResultsAction(
           activeAssessment.id,
           "performance-testing",
           entries
         );
+        mirrorModuleResults(activeAssessment.id, "performance-testing", entries);
         setAssessmentResults((current) => [
           ...current.filter((result) => result.moduleId !== "performance-testing"),
           ...saved,
@@ -403,12 +475,13 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
       const status = await getSupabaseStatus();
       setIsSupabaseConnected(status.configured);
 
-      if (status.configured) {
+      if (status.configured && isUuid(activeAssessment.id)) {
         const saved = await saveAssessmentResultsAction(
           activeAssessment.id,
           "movement-screen",
           savedEntries
         );
+        mirrorModuleResults(activeAssessment.id, "movement-screen", savedEntries);
         setAssessmentResults((current) => [
           ...current.filter((result) => result.moduleId !== "movement-screen"),
           ...saved,
@@ -471,12 +544,13 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
       const status = await getSupabaseStatus();
       setIsSupabaseConnected(status.configured);
 
-      if (status.configured) {
+      if (status.configured && isUuid(activeAssessment.id)) {
         const saved = await saveAssessmentResultsAction(
           activeAssessment.id,
           "screening-mobility",
           savedEntries
         );
+        mirrorModuleResults(activeAssessment.id, "screening-mobility", savedEntries);
         setAssessmentResults((current) => [
           ...current.filter((result) => result.moduleId !== "screening-mobility"),
           ...saved,
@@ -501,18 +575,100 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
     [activeAssessment, refreshAssessmentHistory, markSaved]
   );
 
+  const saveAthleteGoals = useCallback(
+    async (goals: AthleteGoal[]) => {
+      if (!activeAssessment) {
+        throw new Error("No active assessment session");
+      }
+
+      const currentInjuries = buildInjuryHistory(assessmentResults);
+      const savedEntries = profileDataToSaveInputs(goals, currentInjuries);
+      const status = await getSupabaseStatus();
+      setIsSupabaseConnected(status.configured);
+
+      if (status.configured && isUuid(activeAssessment.id)) {
+        const saved = await saveAssessmentResultsAction(
+          activeAssessment.id,
+          "profile",
+          savedEntries
+        );
+        mirrorModuleResults(activeAssessment.id, "profile", savedEntries);
+        setAssessmentResults((current) => [
+          ...current.filter((result) => result.moduleId !== "profile"),
+          ...saved,
+        ]);
+        await refreshAssessmentHistory();
+        markSaved();
+        return;
+      }
+
+      const saved = localStore.upsertResults(activeAssessment.id, "profile", savedEntries);
+      setAssessmentResults((current) => [
+        ...current.filter((result) => result.moduleId !== "profile"),
+        ...saved,
+      ]);
+      await refreshAssessmentHistory();
+      markSaved();
+    },
+    [activeAssessment, assessmentResults, refreshAssessmentHistory, markSaved]
+  );
+
+  const saveInjuryHistory = useCallback(
+    async (entries: AthleteInjuryEntry[]) => {
+      if (!activeAssessment) {
+        throw new Error("No active assessment session");
+      }
+
+      const currentGoals = buildAthleteGoals(assessmentResults);
+      const savedEntries = profileDataToSaveInputs(currentGoals, entries);
+      const status = await getSupabaseStatus();
+      setIsSupabaseConnected(status.configured);
+
+      if (status.configured && isUuid(activeAssessment.id)) {
+        const saved = await saveAssessmentResultsAction(
+          activeAssessment.id,
+          "profile",
+          savedEntries
+        );
+        mirrorModuleResults(activeAssessment.id, "profile", savedEntries);
+        setAssessmentResults((current) => [
+          ...current.filter((result) => result.moduleId !== "profile"),
+          ...saved,
+        ]);
+        await refreshAssessmentHistory();
+        markSaved();
+        return;
+      }
+
+      const saved = localStore.upsertResults(activeAssessment.id, "profile", savedEntries);
+      setAssessmentResults((current) => [
+        ...current.filter((result) => result.moduleId !== "profile"),
+        ...saved,
+      ]);
+      await refreshAssessmentHistory();
+      markSaved();
+    },
+    [activeAssessment, assessmentResults, refreshAssessmentHistory, markSaved]
+  );
+
   const createAthlete = useCallback(
     async (input: CreateAthleteInput) => {
       const status = await getSupabaseStatus();
       setIsSupabaseConnected(status.configured);
 
       if (status.configured) {
-        const created = await createAthleteAction(input);
+        const created = await createAthleteAction({
+          ...input,
+          coach: getCoachDisplayName(),
+        });
         setAthletes((current) => [created, ...current]);
         return created;
       }
 
-      const created = localStore.createAthlete(input);
+      const created = localStore.createAthlete({
+        ...input,
+        coach: getCoachDisplayName(),
+      });
       setAthletes((current) => [created, ...current]);
       return created;
     },
@@ -528,7 +684,7 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
       const status = await getSupabaseStatus();
       setIsSupabaseConnected(status.configured);
 
-      if (status.configured) {
+      if (status.configured && isUuid(athlete.id)) {
         const updated = await updateAthleteAction(athlete.id, updates);
         setAthlete(updated);
         setAthletes((current) =>
@@ -547,6 +703,35 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
     [athlete]
   );
 
+  const deleteAthlete = useCallback(
+    async (athleteId: string) => {
+      const status = await getSupabaseStatus();
+      setIsSupabaseConnected(status.configured);
+
+      if (localStore.isAvailable()) {
+        localStore.deleteAthlete(athleteId);
+      }
+
+      if (status.configured && isUuid(athleteId)) {
+        await deleteAthleteAction(athleteId);
+      }
+
+      setAthletes((current) => current.filter((item) => item.id !== athleteId));
+
+      if (athlete?.id === athleteId) {
+        setAthlete(null);
+        setActiveAssessment(null);
+        setAssessments([]);
+        setAssessmentResults([]);
+        setAssessmentHistory([]);
+        localStore.clearSession();
+        setPendingClassificationId(null);
+        router.push("/coach");
+      }
+    },
+    [athlete, router, setPendingClassificationId]
+  );
+
   const startSession = useCallback(
     async (athleteId: string, classificationId: string, label?: string) => {
       const status = await getSupabaseStatus();
@@ -557,7 +742,10 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
           athleteId,
           classificationId,
           label,
+          coach: getCoachDisplayName(),
         });
+        localStore.syncAthlete(result.athlete);
+        localStore.syncAssessment(result.assessment);
         localStore.saveSession({
           athleteId: result.athlete.id,
           assessmentId: result.assessment.id,
@@ -583,7 +771,7 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
             month: "short",
             year: "numeric",
           })}`,
-        coach: currentAthlete.coach,
+        coach: getCoachDisplayName(),
       });
 
       localStore.saveSession({ athleteId, assessmentId: assessment.id });
@@ -593,6 +781,34 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
     [setPendingClassificationId]
   );
 
+  const refreshAssessments = useCallback(async () => {
+    if (!athlete) {
+      setAssessments([]);
+      return [];
+    }
+
+    const status = await getSupabaseStatus();
+    setIsSupabaseConnected(status.configured);
+
+    if (status.configured && isUuid(athlete.id)) {
+      const cloudRows = await listAssessmentsForAthleteAction(athlete.id);
+      const localRows = localStore.isAvailable()
+        ? localStore.listAssessmentsForAthlete(athlete.id)
+        : [];
+      const rows = mergeRecordsById(cloudRows, localRows);
+      setAssessments(rows);
+      return rows;
+    }
+
+    if (localStore.isAvailable()) {
+      const rows = localStore.listAssessmentsForAthlete(athlete.id);
+      setAssessments(rows);
+      return rows;
+    }
+
+    return [];
+  }, [athlete]);
+
   const setActiveAssessmentId = useCallback(
     (assessmentId: string) => {
       const assessment = assessments.find((item) => item.id === assessmentId);
@@ -600,8 +816,84 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
 
       setActiveAssessment(assessment);
       localStore.saveSession({ athleteId: athlete.id, assessmentId });
+      void loadAssessmentResultsForSession(assessmentId, isSupabaseConnected).then(
+        setAssessmentResults
+      );
     },
-    [assessments, athlete]
+    [assessments, athlete, isSupabaseConnected]
+  );
+
+  const updateAssessment = useCallback(
+    async (
+      assessmentId: string,
+      updates: Partial<Pick<AssessmentRecord, "label" | "status" | "coach">>
+    ) => {
+      const status = await getSupabaseStatus();
+      setIsSupabaseConnected(status.configured);
+
+      let updated: AssessmentRecord;
+      if (status.configured && isUuid(assessmentId)) {
+        updated = await updateAssessmentAction(assessmentId, updates);
+      } else {
+        updated = localStore.updateAssessment(assessmentId, updates);
+      }
+
+      setAssessments((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item))
+      );
+      if (activeAssessment?.id === updated.id) {
+        setActiveAssessment(updated);
+      }
+      await refreshAssessmentHistory();
+      return updated;
+    },
+    [activeAssessment, refreshAssessmentHistory]
+  );
+
+  const deleteAssessment = useCallback(
+    async (assessmentId: string) => {
+      if (!athlete) {
+        throw new Error("No active athlete");
+      }
+
+      const status = await getSupabaseStatus();
+      setIsSupabaseConnected(status.configured);
+
+      if (localStore.isAvailable()) {
+        localStore.deleteAssessment(assessmentId);
+      }
+
+      if (status.configured && isUuid(assessmentId)) {
+        await deleteAssessmentAction(assessmentId);
+      }
+
+      setAssessments((current) => current.filter((item) => item.id !== assessmentId));
+
+      const remaining = await refreshAssessments();
+      await refreshAssessmentHistory();
+
+      if (activeAssessment?.id === assessmentId) {
+        const nextAssessment = remaining[0] ?? null;
+        if (nextAssessment) {
+          setActiveAssessment(nextAssessment);
+          localStore.saveSession({ athleteId: athlete.id, assessmentId: nextAssessment.id });
+          await refreshAssessmentResults();
+        } else {
+          setActiveAssessment(null);
+          setAssessmentResults([]);
+          localStore.clearSession();
+          router.push("/coach");
+        }
+      }
+    },
+    [
+      athlete,
+      activeAssessment,
+      refreshAssessments,
+      refreshAssessmentHistory,
+      refreshAssessmentResults,
+      router,
+    ]
   );
 
   const endSession = useCallback(() => {
@@ -645,6 +937,10 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
     [assessmentResults]
   );
 
+  const athleteGoals = useMemo(() => buildAthleteGoals(assessmentResults), [assessmentResults]);
+
+  const injuryHistory = useMemo(() => buildInjuryHistory(assessmentResults), [assessmentResults]);
+
   const progressTrackingMetrics = useMemo(() => {
     if (!classification || !activeAssessment) return [];
     return buildProgressMetrics(classification, assessmentHistory, activeAssessment.id);
@@ -677,8 +973,11 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
       loadAthletes,
       createAthlete,
       updateAthlete,
+      deleteAthlete,
       startSession,
       setActiveAssessmentId,
+      updateAssessment,
+      deleteAssessment,
       endSession,
       includesModule: (moduleId: AssessmentModuleId) =>
         classification ? classificationIncludesModule(classification, moduleId) : false,
@@ -689,6 +988,8 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
       screeningJointMobility,
       screeningSymmetryIndex,
       screeningSessionNote,
+      athleteGoals,
+      injuryHistory,
       assessmentHistory,
       progressTrackingMetrics,
       nationalRankProgress,
@@ -699,6 +1000,8 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
       savePerformanceResults,
       saveMovementResults,
       saveScreeningResults,
+      saveAthleteGoals,
+      saveInjuryHistory,
     }),
     [
       athlete,
@@ -713,8 +1016,11 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
       loadAthletes,
       createAthlete,
       updateAthlete,
+      deleteAthlete,
       startSession,
       setActiveAssessmentId,
+      updateAssessment,
+      deleteAssessment,
       endSession,
       assessmentResults,
       performanceMetrics,
@@ -722,6 +1028,8 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
       screeningJointMobility,
       screeningSymmetryIndex,
       screeningSessionNote,
+      athleteGoals,
+      injuryHistory,
       assessmentHistory,
       progressTrackingMetrics,
       nationalRankProgress,

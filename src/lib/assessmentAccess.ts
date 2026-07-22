@@ -1,5 +1,6 @@
 import type { MetricItem } from "@/types";
 import type { AssessmentClassification, AssessmentModuleId, PerformanceTestId } from "@/types";
+import { defaultPerformanceTestIds } from "@/data/performanceTesting";
 import { profileMetrics } from "@/data/athlete";
 import { getClassificationById } from "@/data/assessmentClassifications";
 import { assessmentRecords, defaultAssessmentId } from "@/data/assessments";
@@ -7,7 +8,6 @@ import { assessmentRecords, defaultAssessmentId } from "@/data/assessments";
 export const performanceTestLabels: Record<PerformanceTestId, string> = {
   "ten-yard-sprint": "10-Yard Laser Sprint",
   "assault-runner": "Assault Runner Max",
-  "counter-movement-jump": "Counter Movement Jump",
   "vertical-jump": "Vertical Jump",
   rsi: "Reactive Strength Index",
   "broad-jump": "Broad Jump",
@@ -17,7 +17,6 @@ export const performanceTestLabels: Record<PerformanceTestId, string> = {
 export const performanceTestUnits: Record<PerformanceTestId, string> = {
   "ten-yard-sprint": "s",
   "assault-runner": "mph",
-  "counter-movement-jump": "in",
   "vertical-jump": "in",
   rsi: "RSI",
   "broad-jump": "in",
@@ -28,8 +27,6 @@ const labelToPerformanceTestId: Record<string, PerformanceTestId> = {
   "10-Yard Laser Sprint": "ten-yard-sprint",
   "Assault Runner": "assault-runner",
   "Assault Runner Max": "assault-runner",
-  "Counter-Movement Jump": "counter-movement-jump",
-  "Counter Movement Jump": "counter-movement-jump",
   "Vertical Jump": "vertical-jump",
   "Reactive Strength Index": "rsi",
   "Broad Jump": "broad-jump",
@@ -47,7 +44,7 @@ export function getActivePerformanceTests(classification: AssessmentClassificati
   }
 
   if (classification.modules.includes("performance-testing")) {
-    return Object.keys(performanceTestLabels) as PerformanceTestId[];
+    return defaultPerformanceTestIds;
   }
 
   return [];

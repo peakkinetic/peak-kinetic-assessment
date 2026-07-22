@@ -4,8 +4,7 @@ import { speedTestIds, powerTestIds } from "@/data/performanceTesting";
 import { StatCard } from "@/components/ui/StatCard";
 import { useCoachSession } from "@/context/CoachSessionContext";
 import { getPerformanceTestId, performanceTestLabels } from "@/lib/assessmentAccess";
-import { enrichMetricsWithNationalPercentiles } from "@/lib/normComparison";
-import { getNormPoolLabel, getNormPoolForClassification } from "@/data/nationalNorms";
+import { enrichMetricsWithPerformanceTiers } from "@/lib/normComparison";
 import type { MetricItem, PerformanceTestId } from "@/types";
 
 function filterMetricsByTestIds(metrics: MetricItem[], testIds: PerformanceTestId[]): MetricItem[] {
@@ -16,18 +15,15 @@ function filterMetricsByTestIds(metrics: MetricItem[], testIds: PerformanceTestI
 }
 
 export function PerformanceTestingMetrics() {
-  const { athlete, classification, activePerformanceTests, performanceMetrics } = useCoachSession();
+  const { classification, activePerformanceTests, performanceMetrics } = useCoachSession();
 
-  if (!classification || !athlete) {
+  if (!classification) {
     return null;
   }
 
-  const metrics = enrichMetricsWithNationalPercentiles(performanceMetrics, classification.id);
+  const metrics = enrichMetricsWithPerformanceTiers(performanceMetrics, classification.id);
   const speed = filterMetricsByTestIds(metrics, speedTestIds);
   const power = filterMetricsByTestIds(metrics, powerTestIds);
-  const poolId = getNormPoolForClassification(classification.id);
-  const poolLabel = getNormPoolLabel(poolId, athlete.gender);
-  const percentileCaption = `${poolLabel} nationally`;
 
   if (metrics.length === 0) {
     return (
@@ -44,7 +40,7 @@ export function PerformanceTestingMetrics() {
           <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-pkp-black">Speed</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             {speed.map((metric) => (
-              <StatCard key={metric.label} {...metric} percentileCaption={percentileCaption} />
+              <StatCard key={metric.label} {...metric} />
             ))}
           </div>
         </div>
@@ -55,15 +51,15 @@ export function PerformanceTestingMetrics() {
           <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-pkp-black">Power</h3>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {power.map((metric) => (
-              <StatCard key={metric.label} {...metric} percentileCaption={percentileCaption} />
+              <StatCard key={metric.label} {...metric} />
             ))}
           </div>
         </div>
       )}
 
       <p className="mb-2 text-xs text-pkp-gray-500">
-        Percentiles compare each result to the national average for {poolLabel.toLowerCase()}. The
-        50th percentile is the national average for that age group.
+        Each test is rated Elite (5), Good (4), Average (3), or Below Average (2) against PKP
+        benchmarks. Speed and Power category grades are scored out of 15.
       </p>
 
       <p className="text-xs text-pkp-gray-500">

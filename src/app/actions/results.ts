@@ -2,13 +2,14 @@
 
 import { createServiceClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { isUuid } from "@/lib/uuid";
 import { rowToAssessment, rowToAssessmentResult } from "@/lib/db/mappers";
 import type { AssessmentResult, SaveAssessmentResultInput } from "@/types";
 
 export async function listAssessmentResultsAction(
   assessmentId: string
 ): Promise<AssessmentResult[]> {
-  if (!isSupabaseConfigured()) return [];
+  if (!isSupabaseConfigured() || !isUuid(assessmentId)) return [];
 
   const supabase = createServiceClient();
   const { data, error } = await supabase
@@ -22,7 +23,7 @@ export async function listAssessmentResultsAction(
 }
 
 export async function listAssessmentHistoryAction(athleteId: string) {
-  if (!isSupabaseConfigured()) return [];
+  if (!isSupabaseConfigured() || !isUuid(athleteId)) return [];
 
   const supabase = createServiceClient();
   const { data: assessments, error: assessmentError } = await supabase
@@ -57,6 +58,10 @@ export async function saveAssessmentResultsAction(
 ): Promise<AssessmentResult[]> {
   if (!isSupabaseConfigured()) {
     throw new Error("Supabase is not configured");
+  }
+
+  if (!isUuid(assessmentId)) {
+    throw new Error("This assessment must be saved locally. Start a new session from the coach page.");
   }
 
   const supabase = createServiceClient();

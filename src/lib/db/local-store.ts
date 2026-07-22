@@ -1,6 +1,10 @@
-import type { Athlete, AssessmentRecord, SaveAssessmentResultInput } from "@/types";
+import type { Athlete, AssessmentRecord, AssessmentStatus, SaveAssessmentResultInput } from "@/types";
 import { athlete as seedAthlete } from "@/data/athlete";
 import { assessmentRecords as seedAssessments } from "@/data/assessments";
+import {
+  athleteToLocalRow,
+  assessmentToLocalRow,
+} from "@/lib/sessionRecords";
 import {
   athleteToRow,
   getInitials,
@@ -148,7 +152,6 @@ export const localStore = {
       throw new Error("Athlete not found");
     }
 
-    const current = rowToAthlete(rows[index]);
     const nextRow: AthleteRow = {
       ...rows[index],
       height: updates.height !== undefined ? updates.height || null : rows[index].height,
@@ -160,6 +163,32 @@ export const localStore = {
     nextRows[index] = nextRow;
     writeJson(ATHLETES_KEY, nextRows);
     return rowToAthlete(nextRow);
+  },
+
+  deleteAthlete(athleteId: string) {
+    const athleteAssessments = getAssessmentRows().filter((row) => row.athlete_id === athleteId);
+    const assessmentIds = new Set(athleteAssessments.map((row) => row.id));
+
+    writeJson(
+      ATHLETES_KEY,
+      getAthleteRows().filter((row) => row.id !== athleteId)
+    );
+    writeJson(
+      ASSESSMENTS_KEY,
+      getAssessmentRows().filter((row) => row.athlete_id !== athleteId)
+    );
+    writeResultRows(
+      getResultRows().filter((row) => !assessmentIds.has(row.assessment_id))
+    );
+
+    const session = readJson<CoachSessionPayload | null>(SESSION_KEY, null);
+    if (session?.athleteId === athleteId) {
+      localStorage.removeItem(SESSION_KEY);
+    }
+
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(`pkp-athlete-photo-${athleteId}`);
+    }
   },
 
   listAssessmentsForAthlete(athleteId: string): AssessmentRecord[] {
@@ -186,6 +215,37 @@ export const localStore = {
     };
     writeJson(ASSESSMENTS_KEY, [row, ...rows]);
     return rowToAssessment(row);
+  },
+
+  updateAssessment(
+    assessmentId: string,
+    updates: Partial<Pick<AssessmentRecord, "label" | "status" | "coach">>
+  ): AssessmentRecord {
+    const rows = getAssessmentRows();
+    const index = rows.findIndex((row) => row.id === assessmentId);
+    if (index === -1) {
+      throw new Error("Assessment not found");
+    }
+
+    const nextRow: AssessmentRow = {
+      ...rows[index],
+      label: updates.label ?? rows[index].label,
+      status: updates.status ?? rows[index].status,
+      coach: updates.coach ?? rows[index].coach,
+    };
+
+    const nextRows = [...rows];
+    nextRows[index] = nextRow;
+    writeJson(ASSESSMENTS_KEY, nextRows);
+    return rowToAssessment(nextRow);
+  },
+
+  deleteAssessment(assessmentId: string) {
+    writeJson(
+      ASSESSMENTS_KEY,
+      getAssessmentRows().filter((row) => row.id !== assessmentId)
+    );
+    writeResultRows(getResultRows().filter((row) => row.assessment_id !== assessmentId));
   },
 
   getSession(): CoachSessionPayload | null {
@@ -237,13 +297,13 @@ export const localStore = {
       (row) => row.assessment_id === assessmentId && row.module_id === moduleId
     );
 
-    const nextRows = results.map((result) => {
+    const nextRows = results.map((result, index) => {
       const existing = existingForModule.find(
         (row) => row.module_id === result.moduleId && row.test_id === result.testId
       );
 
       const row: AssessmentResultRow = {
-        id: existing?.id ?? `result-${Date.now()}-${result.testId}`,
+        id: existing?.id ?? `result-${Date.now()}-${index}-${result.testId}`,
         assessment_id: assessmentId,
         module_id: result.moduleId,
         test_id: result.testId,
@@ -257,6 +317,32 @@ export const localStore = {
 
     writeResultRows([...preserved, ...nextRows]);
     return nextRows.map(rowToAssessmentResult);
+  },
+
+  syncAthlete(athlete: Athlete) {
+    const rows = getAthleteRows();
+    const row = athleteToLocalRow(athlete);
+    const index = rows.findIndex((item) => item.id === athlete.id);
+    const nextRows = [...rows];
+    if (index === -1) {
+      nextRows.unshift(row);
+    } else {
+      nextRows[index] = { ...nextRows[index], ...row };
+    }
+    writeJson(ATHLETES_KEY, nextRows);
+  },
+
+  syncAssessment(record: AssessmentRecord, assessedAt?: string) {
+    const rows = getAssessmentRows();
+    const row = assessmentToLocalRow(record, assessedAt);
+    const index = rows.findIndex((item) => item.id === record.id);
+    const nextRows = [...rows];
+    if (index === -1) {
+      nextRows.unshift(row);
+    } else {
+      nextRows[index] = { ...nextRows[index], ...row };
+    }
+    writeJson(ASSESSMENTS_KEY, nextRows);
   },
 
   subscribeToChanges(onChange: () => void) {

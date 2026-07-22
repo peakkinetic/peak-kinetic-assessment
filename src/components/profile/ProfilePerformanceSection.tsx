@@ -3,8 +3,7 @@
 import { StatCard } from "@/components/ui/StatCard";
 import { NationalRankingChart } from "@/components/profile/NationalRankingChart";
 import { useCoachSession } from "@/context/CoachSessionContext";
-import { enrichMetricsWithNationalPercentiles } from "@/lib/normComparison";
-import { getNormPoolLabel, getNormPoolForClassification } from "@/data/nationalNorms";
+import { enrichMetricsWithPerformanceTiers } from "@/lib/normComparison";
 
 export function ProfilePerformanceSection() {
   const { athlete, classification, performanceMetrics } = useCoachSession();
@@ -13,11 +12,7 @@ export function ProfilePerformanceSection() {
     return null;
   }
 
-  const metrics = enrichMetricsWithNationalPercentiles(performanceMetrics, classification.id);
-  const poolLabel = getNormPoolLabel(
-    getNormPoolForClassification(classification.id),
-    athlete.gender
-  );
+  const metrics = enrichMetricsWithPerformanceTiers(performanceMetrics, classification.id);
 
   if (metrics.length === 0) {
     return (
@@ -32,11 +27,7 @@ export function ProfilePerformanceSection() {
     <>
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {metrics.map((metric) => (
-          <StatCard
-            key={metric.label}
-            {...metric}
-            percentileCaption={`${poolLabel} nationally`}
-          />
+          <StatCard key={metric.label} {...metric} />
         ))}
       </div>
 

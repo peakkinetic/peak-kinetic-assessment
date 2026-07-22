@@ -30,7 +30,7 @@ export const normPoolLabels: Record<NormPoolId, string> = {
 };
 
 /**
- * PKP national high school performance benchmarks.
+ * PKP high school performance benchmarks.
  * Same thresholds apply to male and female athletes unless separate tables are added later.
  */
 export const highSchoolTestNorms: TestNorm[] = [
@@ -40,12 +40,12 @@ export const highSchoolTestNorms: TestNorm[] = [
     unit: "s",
     higherIsBetter: false,
     ranges: {
-      elite: "≤ 1.55",
-      good: "1.56 – 1.65",
-      average: "1.65 – 1.80",
-      needsImprovement: "> 1.90",
+      elite: "< 1.50",
+      good: "1.51 – 1.65",
+      average: "1.66 – 1.75",
+      needsImprovement: "> 1.76",
     },
-    boundaries: { elite: 1.55, good: 1.65, average: 1.8 },
+    boundaries: { elite: 1.5, good: 1.65, average: 1.75 },
   },
   {
     id: "assault-runner",
@@ -53,25 +53,12 @@ export const highSchoolTestNorms: TestNorm[] = [
     unit: "mph",
     higherIsBetter: true,
     ranges: {
-      elite: "≥ 21.0",
-      good: "19.5 – 20.9",
-      average: "18.0 – 19.4",
-      needsImprovement: "< 18.0",
+      elite: "≥ 22.5",
+      good: "21.0 – 22.4",
+      average: "19.5 – 20.9",
+      needsImprovement: "< 19.4",
     },
-    boundaries: { elite: 21.0, good: 19.5, average: 18.0 },
-  },
-  {
-    id: "counter-movement-jump",
-    label: "Counter Movement Jump",
-    unit: "in",
-    higherIsBetter: true,
-    ranges: {
-      elite: "≥ 28",
-      good: "24 – 27",
-      average: "20 – 23",
-      needsImprovement: "< 20",
-    },
-    boundaries: { elite: 28, good: 24, average: 20 },
+    boundaries: { elite: 22.5, good: 21.0, average: 19.5 },
   },
   {
     id: "vertical-jump",
@@ -79,12 +66,12 @@ export const highSchoolTestNorms: TestNorm[] = [
     unit: "in",
     higherIsBetter: true,
     ranges: {
-      elite: "≥ 32",
-      good: "27 – 31",
+      elite: "≥ 33",
+      good: "27 – 32",
       average: "22 – 26",
       needsImprovement: "< 22",
     },
-    boundaries: { elite: 32, good: 27, average: 22 },
+    boundaries: { elite: 33, good: 27, average: 22 },
   },
   {
     id: "rsi",
@@ -92,12 +79,12 @@ export const highSchoolTestNorms: TestNorm[] = [
     unit: "RSI",
     higherIsBetter: true,
     ranges: {
-      elite: "≥ 3.3",
-      good: "2.5 – 3.2",
-      average: "1.8 – 2.4",
-      needsImprovement: "< 1.8",
+      elite: "≥ 3.0",
+      good: "2.5 – 2.9",
+      average: "2.0 – 2.4",
+      needsImprovement: "< 2.0",
     },
-    boundaries: { elite: 3.3, good: 2.5, average: 1.8 },
+    boundaries: { elite: 3.0, good: 2.5, average: 2.0 },
   },
   {
     id: "broad-jump",
@@ -105,12 +92,12 @@ export const highSchoolTestNorms: TestNorm[] = [
     unit: "in",
     higherIsBetter: true,
     ranges: {
-      elite: "≥ 113 (9'5\")",
-      good: "102 – 112 (8'6\" – 9'4\")",
-      average: "92 – 101 (7'8\" – 8'5\")",
-      needsImprovement: "< 92",
+      elite: "≥ 114 (9'6\")",
+      good: "102 – 113 (8'6\" – 9'5\")",
+      average: "90 – 101 (7'6\" – 8'5\")",
+      needsImprovement: "< 89 (7'5\")",
     },
-    boundaries: { elite: 113, good: 102, average: 92 },
+    boundaries: { elite: 114, good: 102, average: 90 },
   },
   {
     id: "pro-agility",
@@ -118,12 +105,12 @@ export const highSchoolTestNorms: TestNorm[] = [
     unit: "s",
     higherIsBetter: false,
     ranges: {
-      elite: "≤ 4.20",
-      good: "4.21 – 4.50",
-      average: "4.51 – 4.80",
-      needsImprovement: "> 4.80",
+      elite: "< 4.2",
+      good: "4.3 – 4.6",
+      average: "4.7 – 4.99",
+      needsImprovement: "> 5.0",
     },
-    boundaries: { elite: 4.2, good: 4.5, average: 4.8 },
+    boundaries: { elite: 4.2, good: 4.6, average: 4.99 },
   },
 ];
 
@@ -160,19 +147,6 @@ export const middleSchoolTestNorms: TestNorm[] = [
       needsImprovement: "< 13.5",
     },
     boundaries: { elite: 17.5, good: 15.5, average: 13.5 },
-  },
-  {
-    id: "counter-movement-jump",
-    label: "Counter Movement Jump",
-    unit: "in",
-    higherIsBetter: true,
-    ranges: {
-      elite: "≥ 20",
-      good: "17 – 19",
-      average: "14 – 16",
-      needsImprovement: "< 14",
-    },
-    boundaries: { elite: 20, good: 17, average: 14 },
   },
   {
     id: "vertical-jump",

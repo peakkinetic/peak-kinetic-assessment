@@ -24,6 +24,7 @@ export interface MetricItem {
   value: number | string;
   unit?: string;
   percentile?: number;
+  tier?: "Elite" | "Good" | "Average" | "Below Average";
   trend?: "up" | "down" | "neutral";
   change?: string;
 }
@@ -45,7 +46,6 @@ export type AssessmentModuleId =
 export type PerformanceTestId =
   | "ten-yard-sprint"
   | "assault-runner"
-  | "counter-movement-jump"
   | "vertical-jump"
   | "rsi"
   | "broad-jump"
@@ -113,6 +113,16 @@ export interface CreateAthleteInput {
   coach?: string;
 }
 
+export interface AthleteGoal {
+  id: string;
+  title: string;
+}
+
+export interface AthleteInjuryEntry {
+  id: string;
+  description: string;
+}
+
 export interface CoachSessionState {
   athleteId: string;
   assessmentId: string;
@@ -155,6 +165,7 @@ export interface JointMobilityMeasurement {
   joint: string;
   degrees: number;
   notes?: string;
+  side?: "left" | "right";
 }
 
 export type CoachTraitRating = 1 | 2 | 3 | 4 | 5;

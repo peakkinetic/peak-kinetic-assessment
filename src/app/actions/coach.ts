@@ -2,8 +2,9 @@
 
 import { createServiceClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { isUuid } from "@/lib/uuid";
 import { athleteToRow, rowToAthlete, rowToAssessment } from "@/lib/db/mappers";
-import type { Athlete, AssessmentRecord } from "@/types";
+import type { Athlete, AssessmentRecord, AssessmentStatus } from "@/types";
 import { getClassificationById } from "@/data/assessmentClassifications";
 
 export async function getSupabaseStatus() {
@@ -56,6 +57,10 @@ export async function updateAthleteAction(
     throw new Error("Supabase is not configured");
   }
 
+  if (!isUuid(athleteId)) {
+    throw new Error("This athlete profile is stored locally only.");
+  }
+
   const payload: Record<string, string | number | null> = {};
   if (updates.height !== undefined) payload.height = updates.height || null;
   if (updates.weight !== undefined) payload.weight = updates.weight || null;
@@ -73,10 +78,32 @@ export async function updateAthleteAction(
   return rowToAthlete(data);
 }
 
+export async function deleteAthleteAction(athleteId: string): Promise<void> {
+  if (!isSupabaseConfigured()) {
+    throw new Error("Supabase is not configured");
+  }
+
+  if (!isUuid(athleteId)) {
+    return;
+  }
+
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from("athletes")
+    .delete()
+    .eq("id", athleteId)
+    .select("id");
+
+  if (error) throw new Error(error.message);
+  if (!data?.length) {
+    throw new Error("Athlete not found or could not be deleted.");
+  }
+}
+
 export async function listAssessmentsForAthleteAction(
   athleteId: string
 ): Promise<AssessmentRecord[]> {
-  if (!isSupabaseConfigured()) return [];
+  if (!isSupabaseConfigured() || !isUuid(athleteId)) return [];
 
   const supabase = createServiceClient();
   const { data, error } = await supabase
@@ -122,6 +149,57 @@ export async function createAssessmentAction(input: {
 
   if (error) throw new Error(error.message);
   return rowToAssessment(data);
+}
+
+export async function updateAssessmentAction(
+  assessmentId: string,
+  updates: Partial<Pick<AssessmentRecord, "label" | "status" | "coach">>
+): Promise<AssessmentRecord> {
+  if (!isSupabaseConfigured()) {
+    throw new Error("Supabase is not configured");
+  }
+
+  if (!isUuid(assessmentId)) {
+    throw new Error("This assessment is stored locally only.");
+  }
+
+  const payload: Partial<{ label: string; status: AssessmentStatus; coach: string }> = {};
+  if (updates.label !== undefined) payload.label = updates.label;
+  if (updates.status !== undefined) payload.status = updates.status;
+  if (updates.coach !== undefined) payload.coach = updates.coach;
+
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from("assessments")
+    .update(payload)
+    .eq("id", assessmentId)
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+  return rowToAssessment(data);
+}
+
+export async function deleteAssessmentAction(assessmentId: string): Promise<void> {
+  if (!isSupabaseConfigured()) {
+    throw new Error("Supabase is not configured");
+  }
+
+  if (!isUuid(assessmentId)) {
+    return;
+  }
+
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from("assessments")
+    .delete()
+    .eq("id", assessmentId)
+    .select("id");
+
+  if (error) throw new Error(error.message);
+  if (!data?.length) {
+    throw new Error("Assessment not found or could not be deleted.");
+  }
 }
 
 export async function startCoachSessionAction(input: {

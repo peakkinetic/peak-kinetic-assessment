@@ -32,9 +32,24 @@ export function buildJointMobility(results: AssessmentResult[]): JointMobilityMe
         joint: category.label,
         degrees: result.value,
         notes: result.notes,
+        side: category.side,
       },
     ];
   });
+}
+
+export function splitJointMobilityBySide(measurements: JointMobilityMeasurement[]) {
+  const getSide = (measurement: JointMobilityMeasurement): "left" | "right" | null => {
+    if (measurement.side) return measurement.side;
+    if (measurement.joint.includes("(L)")) return "left";
+    if (measurement.joint.includes("(R)")) return "right";
+    return null;
+  };
+
+  return {
+    left: measurements.filter((measurement) => getSide(measurement) === "left"),
+    right: measurements.filter((measurement) => getSide(measurement) === "right"),
+  };
 }
 
 export function buildSymmetryIndex(results: AssessmentResult[]): SymmetryIndexEntry[] {

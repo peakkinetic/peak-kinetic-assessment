@@ -7,10 +7,15 @@ export const speedTestIds: PerformanceTestId[] = [
 ];
 
 export const powerTestIds: PerformanceTestId[] = [
-  "counter-movement-jump",
   "vertical-jump",
   "rsi",
   "broad-jump",
+];
+
+/** Default battery when a classification does not specify its own list. */
+export const defaultPerformanceTestIds: PerformanceTestId[] = [
+  ...speedTestIds,
+  ...powerTestIds,
 ];
 
 export const sprintPhases = {

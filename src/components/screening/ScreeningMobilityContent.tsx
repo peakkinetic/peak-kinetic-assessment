@@ -1,17 +1,18 @@
 "use client";
 
 import { Card, CardHeader } from "@/components/ui/Card";
-import { DataTable } from "@/components/ui/DataTable";
-import { ProgressBar } from "@/components/ui/ProgressBar";
 import { BarChart } from "@/components/charts/BarChart";
 import { HideBarChartsForMiddleSchool } from "@/components/assessment/HideBarChartsForMiddleSchool";
+import { JointMobilityTable } from "@/components/screening/JointMobilityTable";
 import { useCoachSession } from "@/context/CoachSessionContext";
 import { brandColors } from "@/lib/brandColors";
+import { splitJointMobilityBySide } from "@/lib/screeningMetrics";
 
 export function ScreeningMobilityContent() {
   const { screeningJointMobility, screeningSymmetryIndex, screeningSessionNote } =
     useCoachSession();
 
+  const { left, right } = splitJointMobilityBySide(screeningJointMobility);
   const hasJointData = screeningJointMobility.length > 0;
 
   return (
@@ -23,43 +24,21 @@ export function ScreeningMobilityContent() {
         </p>
       )}
 
-      <div className="mb-8">
+      <div className="mb-8 space-y-6">
         <Card>
           <CardHeader
-            title="Joint Mobility Measurements"
+            title="Left Side"
             subtitle="ROM recorded in degrees (0–140°)"
           />
-          {hasJointData ? (
-            <DataTable
-              headers={["Joint", "Measurement", "Screening Notes"]}
-              rows={screeningJointMobility.map((joint) => [
-                joint.joint,
-                <div key={`${joint.joint}-measurement`} className="min-w-[160px]">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-lg font-bold tabular-nums text-pkp-black">
-                      {joint.degrees}
-                    </span>
-                    <span className="text-sm text-pkp-gray-400">°</span>
-                    <span className="ml-auto text-xs text-pkp-gray-400">/ 140°</span>
-                  </div>
-                  <ProgressBar
-                    value={joint.degrees}
-                    max={140}
-                    showValue={false}
-                    size="sm"
-                    color="black"
-                    animated={false}
-                    className="mt-2"
-                  />
-                </div>,
-                <span key={`${joint.joint}-notes`} className="text-pkp-gray-500">
-                  {joint.notes || "—"}
-                </span>,
-              ])}
-            />
-          ) : (
-            <p className="text-sm text-pkp-gray-500">No joint measurements saved yet.</p>
-          )}
+          <JointMobilityTable joints={left} />
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Right Side"
+            subtitle="ROM recorded in degrees (0–140°)"
+          />
+          <JointMobilityTable joints={right} />
         </Card>
       </div>
 

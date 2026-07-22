@@ -105,17 +105,31 @@
     display: none !important;
   }
 
+  html,
+  body {
+    background: white !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Animations start at opacity:0 — without this, print preview renders blank */
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
   main {
     padding: 0 !important;
     overflow: visible !important;
   }
 
-  body {
-    background: white !important;
-  }
-
   .athlete-report {
-    break-inside: avoid;
+    display: block !important;
+    break-inside: auto;
   }
 
   .athlete-report section {

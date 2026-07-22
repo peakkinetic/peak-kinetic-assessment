@@ -12,11 +12,14 @@ import { AssessmentSelector } from "@/components/assessment/AssessmentSelector";
 import { SavedDataStatus } from "@/components/coach/SavedDataStatus";
 import { getNavIcon, getNavItemsForClassification } from "./navConfig";
 import { useCoachSession } from "@/context/CoachSessionContext";
+import { useCoachAuth } from "@/context/CoachAuthContext";
+import { localStore } from "@/lib/db/local-store";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
   const { classification, endSession } = useCoachSession();
+  const { coach, logout } = useCoachAuth();
   const visibleNavItems = classification
     ? getNavItemsForClassification(classification.modules)
     : [];
@@ -79,7 +82,23 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
         <main className="flex-1 overflow-y-auto px-4 py-6 pb-24 md:px-8 md:py-8 lg:pb-8">
           <div className="mx-auto max-w-7xl animate-slide-up">
-            <div className="mb-4 flex justify-end print:hidden">
+            <div className="mb-4 flex flex-wrap justify-end gap-2 print:hidden">
+              {coach && (
+                <p className="mr-auto self-center text-xs font-semibold text-pkp-gray-500">
+                  Coach: <span className="text-pkp-black">{coach.displayName}</span>
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={async () => {
+                  localStore.clearSession();
+                  await logout();
+                }}
+                className="inline-flex items-center gap-2 rounded-lg border border-pkp-gray-200 bg-white px-3 py-2 text-xs font-bold uppercase tracking-wide text-pkp-gray-600 hover:border-pkp-red hover:text-pkp-red"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                Sign Out
+              </button>
               <button
                 type="button"
                 onClick={endSession}

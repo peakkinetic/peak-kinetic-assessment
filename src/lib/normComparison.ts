@@ -11,7 +11,7 @@ import {
   type TestNorm,
 } from "@/data/nationalNorms";
 
-export type PerformanceTier = "Needs Improvement" | "Average" | "Good" | "Elite";
+export type PerformanceTier = "Below Average" | "Average" | "Good" | "Elite";
 
 export interface NormComparisonResult {
   testId: string;
@@ -32,8 +32,6 @@ const metricToNormId: Record<string, string> = {
   "10-Yard Laser Sprint": "ten-yard-sprint",
   "Assault Runner": "assault-runner",
   "Assault Runner Max": "assault-runner",
-  "Counter Movement Jump": "counter-movement-jump",
-  "Counter-Movement Jump": "counter-movement-jump",
   "Vertical Jump": "vertical-jump",
   "Reactive Strength Index": "rsi",
   "Broad Jump": "broad-jump",
@@ -50,25 +48,25 @@ export function classifyPerformance(
     if (value >= boundaries.elite) return "Elite";
     if (value >= boundaries.good) return "Good";
     if (value >= boundaries.average) return "Average";
-    return "Needs Improvement";
+    return "Below Average";
   }
 
   if (value <= boundaries.elite) return "Elite";
   if (value <= boundaries.good) return "Good";
   if (value <= boundaries.average) return "Average";
-  return "Needs Improvement";
+  return "Below Average";
 }
 
 function getTierScore(tier: PerformanceTier): number {
   switch (tier) {
     case "Elite":
-      return 100;
+      return 5;
     case "Good":
-      return 75;
+      return 4;
     case "Average":
-      return 50;
+      return 3;
     default:
-      return 25;
+      return 2;
   }
 }
 
@@ -232,7 +230,7 @@ export function compareToNationalNorms(
   });
 }
 
-export function enrichMetricsWithNationalPercentiles(
+export function enrichMetricsWithPerformanceTiers(
   metrics: MetricItem[],
   classificationId: string
 ): MetricItem[] {
@@ -247,18 +245,21 @@ export function enrichMetricsWithNationalPercentiles(
 
     const norm = norms.find((test) => test.id === testId);
     if (!norm) {
-      throw new Error(`Missing national norms for test: ${testId}`);
+      throw new Error(`Missing performance benchmarks for test: ${testId}`);
     }
 
-    const percentile = calculateNationalRankPercentile(
+    const tier = classifyPerformance(
       Number(metric.value),
       norm.boundaries,
       norm.higherIsBetter
     );
 
-    return { ...metric, percentile };
+    return { ...metric, tier };
   });
 }
+
+/** @deprecated Use enrichMetricsWithPerformanceTiers */
+export const enrichMetricsWithNationalPercentiles = enrichMetricsWithPerformanceTiers;
 
 export function getNationalComparisonFromMetrics(
   metrics: MetricItem[],
@@ -315,7 +316,9 @@ export function formatSignedDifference(value: number, unit: string): string {
   return `${prefix}${formatted}${unit ? ` ${unit}` : ""}`;
 }
 
-export function getTierBadgeVariant(tier: PerformanceTier): "success" | "info" | "warning" | "red" {
+export function getTierBadgeVariant(
+  tier: PerformanceTier
+): "success" | "info" | "warning" | "red" {
   switch (tier) {
     case "Elite":
       return "success";

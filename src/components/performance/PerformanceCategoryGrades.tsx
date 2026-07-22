@@ -4,7 +4,7 @@ import { speedTestIds, powerTestIds } from "@/data/performanceTesting";
 import { GradeBadge } from "@/components/ui/DataTable";
 import { useCoachSession } from "@/context/CoachSessionContext";
 import { getPerformanceTestId } from "@/lib/assessmentAccess";
-import { enrichMetricsWithNationalPercentiles } from "@/lib/normComparison";
+import { enrichMetricsWithPerformanceTiers } from "@/lib/normComparison";
 import { getCategoryGrade } from "@/lib/performanceGrades";
 import type { MetricItem, PerformanceTestId } from "@/types";
 
@@ -22,10 +22,10 @@ export function PerformanceCategoryGrades() {
     return null;
   }
 
-  const metrics = enrichMetricsWithNationalPercentiles(performanceMetrics, classification.id);
+  const metrics = enrichMetricsWithPerformanceTiers(performanceMetrics, classification.id);
   const grades = [
-    getCategoryGrade(filterMetricsByTestIds(metrics, speedTestIds), "Speed"),
-    getCategoryGrade(filterMetricsByTestIds(metrics, powerTestIds), "Power"),
+    getCategoryGrade(filterMetricsByTestIds(metrics, speedTestIds), "Speed", speedTestIds.length),
+    getCategoryGrade(filterMetricsByTestIds(metrics, powerTestIds), "Power", powerTestIds.length),
   ].filter((grade): grade is NonNullable<typeof grade> => grade !== null);
 
   if (grades.length === 0) {
@@ -43,7 +43,7 @@ export function PerformanceCategoryGrades() {
           <div>
             <p className="text-sm font-semibold">{grade.category}</p>
             <p className="text-xs text-pkp-gray-400">
-              {grade.score}/100 avg national pct · {grade.testCount} tests
+              {grade.score}/{grade.maxScore} · {grade.testCount} tests scored
             </p>
           </div>
         </div>

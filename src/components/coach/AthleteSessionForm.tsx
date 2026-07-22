@@ -8,12 +8,16 @@ import { Card, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { getClassificationById } from "@/data/assessmentClassifications";
 import { useCoachSession } from "@/context/CoachSessionContext";
+import { athleteBelongsToCoach, useCoachAuth } from "@/context/CoachAuthContext";
 
 export function AthleteSessionForm() {
   const searchParams = useSearchParams();
   const classificationId = searchParams.get("classification");
 
   const { athletes, loadAthletes, createAthlete, startSession } = useCoachSession();
+  const { coach } = useCoachAuth();
+
+  const visibleAthletes = athletes.filter((item) => athleteBelongsToCoach(item.coach, coach));
 
   const [mode, setMode] = useState<"select" | "add">("select");
   const [startingAthleteId, setStartingAthleteId] = useState<string | null>(null);
@@ -43,10 +47,10 @@ export function AthleteSessionForm() {
   }, [loadAthletes]);
 
   useEffect(() => {
-    if (athletes.length === 0) {
+    if (visibleAthletes.length === 0) {
       setMode("add");
     }
-  }, [athletes.length]);
+  }, [visibleAthletes.length]);
 
   async function beginSession(athleteId: string) {
     if (!classification) return;
@@ -128,7 +132,7 @@ export function AthleteSessionForm() {
         <button
           type="button"
           onClick={() => setMode("select")}
-          disabled={athletes.length === 0}
+          disabled={visibleAthletes.length === 0}
           className={`rounded-lg px-4 py-2 text-sm font-bold disabled:opacity-40 ${
             mode === "select" ? "bg-pkp-black text-white" : "bg-white text-pkp-gray-600 ring-1 ring-pkp-gray-200"
           }`}
@@ -154,12 +158,12 @@ export function AthleteSessionForm() {
             subtitle="Click an athlete to start this assessment session"
           />
           <div className="space-y-2">
-            {athletes.length === 0 ? (
+            {visibleAthletes.length === 0 ? (
               <p className="text-sm text-pkp-gray-500">
-                No athletes yet. Use Add New Athlete to create one.
+                No athletes yet for {coach?.displayName ?? "this coach"}. Use Add New Athlete to create one.
               </p>
             ) : (
-              athletes.map((item) => {
+              visibleAthletes.map((item) => {
                 const isStarting = startingAthleteId === item.id && isSubmitting;
 
                 return (

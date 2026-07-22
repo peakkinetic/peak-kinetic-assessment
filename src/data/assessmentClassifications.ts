@@ -35,7 +35,6 @@ export const assessmentClassifications: AssessmentClassification[] = [
     performanceTests: [
       "ten-yard-sprint",
       "assault-runner",
-      "counter-movement-jump",
       "vertical-jump",
       "rsi",
       "broad-jump",

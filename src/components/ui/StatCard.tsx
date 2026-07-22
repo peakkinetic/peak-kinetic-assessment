@@ -1,13 +1,16 @@
+"use client";
+
 import { TrendingDown, TrendingUp, Minus } from "lucide-react";
 import { cn, getTrendColor } from "@/lib/utils";
+import { getTierBadgeVariant } from "@/lib/normComparison";
+import { Badge } from "./Badge";
 import { Card } from "./Card";
 
 interface StatCardProps {
   label: string;
   value: string | number;
   unit?: string;
-  percentile?: number;
-  percentileCaption?: string;
+  tier?: "Elite" | "Good" | "Average" | "Below Average";
   trend?: "up" | "down" | "neutral";
   change?: string;
   className?: string;
@@ -17,8 +20,7 @@ export function StatCard({
   label,
   value,
   unit,
-  percentile,
-  percentileCaption,
+  tier,
   trend,
   change,
   className,
@@ -33,17 +35,8 @@ export function StatCard({
         {unit && <span className="text-sm font-semibold text-pkp-gray-400">{unit}</span>}
       </div>
       <div className="mt-3 flex items-center justify-between gap-2">
-        {percentile !== undefined && (
-          <div>
-            <span className="rounded-md bg-pkp-black px-2.5 py-0.5 text-xs font-semibold text-white">
-              {percentile}th pct
-            </span>
-            {percentileCaption && (
-              <p className="mt-1.5 text-[10px] font-medium leading-snug text-pkp-gray-400">
-                vs. {percentileCaption}
-              </p>
-            )}
-          </div>
+        {tier && (
+          <Badge variant={getTierBadgeVariant(tier)}>{tier}</Badge>
         )}
         {trend && change && (
           <span className={cn("flex items-center gap-1 text-xs font-semibold", getTrendColor(trend))}>

@@ -19,6 +19,7 @@ export default function AthleteProfilePage() {
         subtitle="Complete assessment report — share with athletes, parents, and agents"
         badge={<Badge variant="black">PKP Report</Badge>}
         action={<PrintReportButton />}
+        className="print:hidden"
       />
 
       <AssessmentModuleGuard moduleId="profile">

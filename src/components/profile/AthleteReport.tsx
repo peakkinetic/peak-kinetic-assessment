@@ -1,8 +1,8 @@
 "use client";
 
-import { Calendar, Printer, Ruler, User, Weight } from "lucide-react";
+import { Calendar, ClipboardList, Printer, Ruler, User, Weight } from "lucide-react";
 import { AthleteAvatar } from "@/components/ui/AthleteAvatar";
-import { Card } from "@/components/ui/Card";
+import { Card, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { StatCard } from "@/components/ui/StatCard";
 import { DataTable, AssessmentScoreBadge, AssessmentScoreLegend, GradeBadge } from "@/components/ui/DataTable";
@@ -10,12 +10,14 @@ import { ProgressBar } from "@/components/ui/ProgressBar";
 import { BarChart } from "@/components/charts/BarChart";
 import { NationalRankingChart } from "@/components/profile/NationalRankingChart";
 import { ReportSection } from "@/components/profile/ReportSection";
+import { ProfileGoalsSection } from "@/components/profile/ProfileGoalsSection";
+import { ProfileInjuryHistorySection } from "@/components/profile/ProfileInjuryHistorySection";
+import { JointMobilityTable } from "@/components/screening/JointMobilityTable";
 import { HideBarChartsForMiddleSchool } from "@/components/assessment/HideBarChartsForMiddleSchool";
 import { useCoachSession } from "@/context/CoachSessionContext";
 import { speedTestIds, powerTestIds } from "@/data/performanceTesting";
 import { getPerformanceTestId } from "@/lib/assessmentAccess";
-import { enrichMetricsWithNationalPercentiles, getNationalComparisonFromMetrics } from "@/lib/normComparison";
-import { getNormPoolLabel, getNormPoolForClassification } from "@/data/nationalNorms";
+import { enrichMetricsWithPerformanceTiers, getNationalComparisonFromMetrics } from "@/lib/normComparison";
 import { getCategoryGrade } from "@/lib/performanceGrades";
 import {
   buildMovementPatterns,
@@ -28,6 +30,7 @@ import {
   isScoredAssessment,
 } from "@/lib/utils";
 import { brandColors } from "@/lib/brandColors";
+import { splitJointMobilityBySide } from "@/lib/screeningMetrics";
 import type { MetricItem, PerformanceTestId } from "@/types";
 
 function filterMetricsByTestIds(metrics: MetricItem[], testIds: PerformanceTestId[]): MetricItem[] {
@@ -74,14 +77,13 @@ export function AthleteReport() {
   if (!athlete || !classification || !activeAssessment) return null;
 
   const metrics = includesModule("performance-testing")
-    ? enrichMetricsWithNationalPercentiles(performanceMetrics, classification.id)
+    ? enrichMetricsWithPerformanceTiers(performanceMetrics, classification.id)
     : [];
-  const poolLabel = getNormPoolLabel(getNormPoolForClassification(classification.id), athlete.gender);
   const speed = filterMetricsByTestIds(metrics, speedTestIds);
   const power = filterMetricsByTestIds(metrics, powerTestIds);
   const categoryGrades = [
-    getCategoryGrade(speed, "Speed"),
-    getCategoryGrade(power, "Power"),
+    getCategoryGrade(speed, "Speed", speedTestIds.length),
+    getCategoryGrade(power, "Power", powerTestIds.length),
   ].filter((grade): grade is NonNullable<typeof grade> => grade !== null);
   const comparison =
     metrics.length > 0
@@ -91,6 +93,7 @@ export function AthleteReport() {
   const movementPatterns = buildMovementPatterns(movementScores);
   const { average: overallMovementScore } = getOverallMovementScore(movementScores);
   const hasMovementScores = movementScores.some((score) => isScoredAssessment(score.score));
+  const screeningBySide = splitJointMobilityBySide(screeningJointMobility);
 
   return (
     <article className="athlete-report space-y-10 md:space-y-12">
@@ -121,20 +124,26 @@ export function AthleteReport() {
               <div className="rounded-xl border border-pkp-gray-200 bg-pkp-gray-50 px-6 py-4 text-center md:text-right">
                 <p className="text-3xl font-bold tabular-nums text-pkp-red">
                   {comparison.averageTierScore}
+                  <span className="text-lg text-pkp-gray-400">/5</span>
                 </p>
                 <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-pkp-gray-500">
-                  Benchmark Score
+                  Avg Tier Points
                 </p>
               </div>
             )}
           </div>
 
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {[
               { icon: Calendar, label: "Age", value: athlete.age ? `${athlete.age} yrs` : "—" },
               { icon: Ruler, label: "Height", value: athlete.height || "—" },
               { icon: Weight, label: "Weight", value: athlete.weight || "—" },
               { icon: User, label: "Gender", value: athlete.gender },
+              {
+                icon: ClipboardList,
+                label: "Assessment Coach",
+                value: activeAssessment.coach || "—",
+              },
             ].map(({ icon: Icon, label, value }) => (
               <div
                 key={label}
@@ -155,10 +164,14 @@ export function AthleteReport() {
         </Card>
       </ReportSection>
 
+      <ProfileGoalsSection />
+
+      <ProfileInjuryHistorySection />
+
       {includesModule("performance-testing") && (
         <ReportSection
           title="Performance Testing"
-          subtitle="Speed and power results compared to national benchmarks"
+          subtitle="Speed and power results vs PKP benchmarks"
         >
           {metrics.length === 0 ? (
             <EmptySection message="No performance scores recorded for this assessment." />
@@ -175,7 +188,7 @@ export function AthleteReport() {
                       <div>
                         <p className="text-sm font-semibold">{grade.category}</p>
                         <p className="text-xs text-pkp-gray-400">
-                          {grade.score}/100 avg national pct · {grade.testCount} tests
+                          {grade.score}/{grade.maxScore} · {grade.testCount} tests scored
                         </p>
                       </div>
                     </div>
@@ -190,11 +203,7 @@ export function AthleteReport() {
                   </h3>
                   <div className="grid gap-4 sm:grid-cols-2">
                     {speed.map((metric) => (
-                      <StatCard
-                        key={metric.label}
-                        {...metric}
-                        percentileCaption={`${poolLabel} nationally`}
-                      />
+                      <StatCard key={metric.label} {...metric} />
                     ))}
                   </div>
                 </div>
@@ -207,11 +216,7 @@ export function AthleteReport() {
                   </h3>
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {power.map((metric) => (
-                      <StatCard
-                        key={metric.label}
-                        {...metric}
-                        percentileCaption={`${poolLabel} nationally`}
-                      />
+                      <StatCard key={metric.label} {...metric} />
                     ))}
                   </div>
                 </div>
@@ -299,32 +304,16 @@ export function AthleteReport() {
           ) : (
             <div className="space-y-6">
               {screeningJointMobility.length > 0 && (
-                <Card>
-                  <DataTable
-                    headers={["Joint", "Measurement", "Notes"]}
-                    rows={screeningJointMobility.map((joint) => [
-                      joint.joint,
-                      <div key={`${joint.joint}-measurement`} className="min-w-[140px]">
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-lg font-bold tabular-nums">{joint.degrees}</span>
-                          <span className="text-sm text-pkp-gray-400">°</span>
-                        </div>
-                        <ProgressBar
-                          value={joint.degrees}
-                          max={140}
-                          showValue={false}
-                          size="sm"
-                          color="black"
-                          animated={false}
-                          className="mt-2"
-                        />
-                      </div>,
-                      <span key={`${joint.joint}-notes`} className="text-pkp-gray-500">
-                        {joint.notes || "—"}
-                      </span>,
-                    ])}
-                  />
-                </Card>
+                <div className="space-y-6">
+                  <Card>
+                    <CardHeader title="Left Side" />
+                    <JointMobilityTable joints={screeningBySide.left} notesHeader="Notes" />
+                  </Card>
+                  <Card>
+                    <CardHeader title="Right Side" />
+                    <JointMobilityTable joints={screeningBySide.right} notesHeader="Notes" />
+                  </Card>
+                </div>
               )}
 
               <HideBarChartsForMiddleSchool>
