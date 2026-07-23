@@ -5,12 +5,11 @@ import { useRouter } from "next/navigation";
 import { LogIn } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { useCoachAuth } from "@/context/CoachAuthContext";
-import { localCoachAccounts } from "@/data/localCoaches";
 
 export function CoachLoginForm() {
   const router = useRouter();
   const { login, usesSupabaseAuth } = useCoachAuth();
-  const [identifier, setIdentifier] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +20,7 @@ export function CoachLoginForm() {
     setError(null);
 
     try {
-      await login(identifier, password);
+      await login(email, password);
       router.replace("/coach");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not sign in.");
@@ -35,24 +34,22 @@ export function CoachLoginForm() {
         title="Coach Sign In"
         subtitle={
           usesSupabaseAuth
-            ? "Sign in with your coach email and password"
-            : "Sign in with your coach username and password"
+            ? "Use the email and password provided for your coach account"
+            : "Local demo mode — add Supabase env vars on Vercel for production logins"
         }
       />
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <label className="block text-sm">
-          <span className="mb-1 block font-semibold text-pkp-black">
-            {usesSupabaseAuth ? "Email" : "Username"}
-          </span>
+          <span className="mb-1 block font-semibold text-pkp-black">Email</span>
           <input
-            type={usesSupabaseAuth ? "email" : "text"}
+            type="email"
             autoComplete="username"
             required
-            value={identifier}
-            onChange={(event) => setIdentifier(event.target.value)}
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
             className="w-full rounded-lg border border-pkp-gray-200 px-3 py-2.5"
-            placeholder={usesSupabaseAuth ? "coach@peakkinetic.com" : "moody"}
+            placeholder="coach@peakkinetic.com"
           />
         </label>
 
@@ -78,22 +75,6 @@ export function CoachLoginForm() {
           {isSubmitting ? "Signing in…" : "Sign In"}
         </button>
       </form>
-
-      {!usesSupabaseAuth && (
-        <div className="mt-6 rounded-xl border border-pkp-gray-100 bg-pkp-gray-50/70 px-4 py-3 text-sm text-pkp-gray-600">
-          <p className="font-semibold text-pkp-black">Demo coach logins</p>
-          <ul className="mt-2 space-y-1">
-            {localCoachAccounts.map((account) => (
-              <li key={account.id}>
-                <span className="font-medium">{account.displayName}</span> — username{" "}
-                <code className="rounded bg-white px-1.5 py-0.5 text-xs">{account.username}</code>{" "}
-                / password{" "}
-                <code className="rounded bg-white px-1.5 py-0.5 text-xs">{account.password}</code>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
 
       {error && <p className="mt-4 text-sm font-medium text-pkp-red">{error}</p>}
     </Card>

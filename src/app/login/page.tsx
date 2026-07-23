@@ -39,7 +39,7 @@ export default function LoginPage() {
           <p className="pkp-section-label text-pkp-red">Peak Kinetic Performance</p>
           <h1 className="mt-2 text-2xl font-bold text-pkp-black md:text-3xl">Coach Login</h1>
           <p className="mt-2 text-sm text-pkp-gray-500">
-            Each coach signs in with their own login and password.
+            Sign in with your PKP coach email and password.
           </p>
         </div>
         <CoachLoginForm />

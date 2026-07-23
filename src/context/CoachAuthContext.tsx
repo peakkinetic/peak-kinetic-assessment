@@ -17,7 +17,7 @@ import {
   type CoachAuthSession,
 } from "@/lib/coachAuthSession";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { isSupabaseClientConfigured } from "@/lib/supabase/env";
 
 interface CoachAuthContextValue {
   coach: CoachAuthSession | null;
@@ -34,7 +34,7 @@ export function CoachAuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [coach, setCoach] = useState<CoachAuthSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const usesSupabaseAuth = isSupabaseConfigured();
+  const usesSupabaseAuth = isSupabaseClientConfigured();
 
   useEffect(() => {
     let cancelled = false;

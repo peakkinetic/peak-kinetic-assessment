@@ -1,8 +1,8 @@
 import { createBrowserClient } from "@supabase/ssr";
-import { isSupabaseConfigured } from "./env";
+import { isSupabaseClientConfigured } from "@/lib/supabase/env";
 
 export function createBrowserSupabaseClient() {
-  if (!isSupabaseConfigured()) {
+  if (!isSupabaseClientConfigured()) {
     return null;
   }
 
