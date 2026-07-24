@@ -14,6 +14,12 @@ export const screeningMobilityCategories = [
     side: "left" as const,
   },
   {
+    id: "shoulder-ir-l",
+    label: "Shoulder IR (L)",
+    symmetryGroup: "Shoulder IR",
+    side: "left" as const,
+  },
+  {
     id: "straight-leg-raise-l",
     label: "Straight Leg Raise (L)",
     symmetryGroup: "Straight Leg Raise",
@@ -31,6 +37,12 @@ export const screeningMobilityCategories = [
     id: "shoulder-er-r",
     label: "Shoulder ER (R)",
     symmetryGroup: "Shoulder ER",
+    side: "right" as const,
+  },
+  {
+    id: "shoulder-ir-r",
+    label: "Shoulder IR (R)",
+    symmetryGroup: "Shoulder IR",
     side: "right" as const,
   },
   {

@@ -61,10 +61,11 @@ export const assessmentClassifications: AssessmentClassification[] = [
     label: "College Assessment",
     group: "advanced",
     description:
-      "Recruiting-ready profile with movement screen, full combine metrics, progress tracking, and coach evaluation.",
+      "Recruiting-ready profile with movement screen, mobility screening, full combine metrics, progress tracking, and coach evaluation.",
     modules: [
       "profile",
       "movement-screen",
+      "screening-mobility",
       "performance-testing",
       "progress-tracking",
       "coach-report",

@@ -3,7 +3,6 @@
 import { ProfilePhotoEditor } from "@/components/profile/ProfilePhotoEditor";
 import { ProfileDetailsEditor } from "@/components/profile/ProfileDetailsEditor";
 import { ProfileAssessmentCoachEditor } from "@/components/profile/ProfileAssessmentCoachEditor";
-import { ProfileDeleteAthleteSection } from "@/components/profile/ProfileDeleteAthleteSection";
 
 export function ProfileCoachTools() {
   return (
@@ -20,7 +19,6 @@ export function ProfileCoachTools() {
         <ProfileAssessmentCoachEditor />
         <ProfilePhotoEditor />
         <ProfileDetailsEditor />
-        <ProfileDeleteAthleteSection />
       </div>
     </details>
   );

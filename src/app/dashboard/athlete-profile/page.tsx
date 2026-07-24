@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { AthleteReport, PrintReportButton } from "@/components/profile/AthleteReport";
 import { ProfileCoachTools } from "@/components/profile/ProfileCoachTools";
+import { ProfileDeleteAthleteSection } from "@/components/profile/ProfileDeleteAthleteSection";
 import { AssessmentModuleGuard } from "@/components/assessment/AssessmentModuleGuard";
 import { useCoachSession } from "@/context/CoachSessionContext";
 
@@ -25,6 +26,9 @@ export default function AthleteProfilePage() {
       <AssessmentModuleGuard moduleId="profile">
         <ProfileCoachTools />
         <AthleteReport />
+        <div className="print:hidden mt-10">
+          <ProfileDeleteAthleteSection />
+        </div>
       </AssessmentModuleGuard>
     </>
   );

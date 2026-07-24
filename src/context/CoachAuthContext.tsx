@@ -111,6 +111,11 @@ export function CoachAuthProvider({ children }: { children: ReactNode }) {
         });
 
         if (error) {
+          if (error.message.toLowerCase().includes("invalid path")) {
+            throw new Error(
+              "Supabase URL is misconfigured. In Vercel, NEXT_PUBLIC_SUPABASE_URL must be your https://xxxx.supabase.co project URL — not your custom domain."
+            );
+          }
           throw new Error(error.message);
         }
 

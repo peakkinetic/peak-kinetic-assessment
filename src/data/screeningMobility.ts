@@ -10,7 +10,9 @@ export const jointMobility: JointMobilityMeasurement[] = [
   { joint: "Hip Flexion (L)", degrees: 118, notes: "Full flexion range" },
   { joint: "Hip Flexion (R)", degrees: 122, notes: "Within normal range" },
   { joint: "Shoulder ER (L)", degrees: 88, notes: "Full overhead range" },
+  { joint: "Shoulder IR (L)", degrees: 45, notes: "Adequate internal rotation" },
   { joint: "Shoulder ER (R)", degrees: 90, notes: "Throwing arm — excellent" },
+  { joint: "Shoulder IR (R)", degrees: 48, notes: "Within normal range" },
 ];
 
 export const symmetryIndex = [
@@ -19,6 +21,7 @@ export const symmetryIndex = [
   { joint: "Hip ER", left: 40, right: 38, unit: "°", difference: 2 },
   { joint: "Hip Flexion", left: 118, right: 122, unit: "°", difference: 4 },
   { joint: "Shoulder ER", left: 88, right: 90, unit: "°", difference: 2 },
+  { joint: "Shoulder IR", left: 45, right: 48, unit: "°", difference: 3 },
   { joint: "Hamstring", left: 72, right: 78, unit: "°", difference: 6 },
 ];
 
