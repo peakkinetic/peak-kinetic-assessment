@@ -25,6 +25,8 @@ const moduleLabels: Record<AssessmentModuleId, string> = {
   "movement-screen": "Movement Screen",
   "screening-mobility": "Screening Mobility",
   "performance-testing": "Performance Testing",
+  "hittrax-testing": "Hittrax Testing",
+  "blast-testing": "Blast Testing",
   "progress-tracking": "Progress Tracking",
   "coach-report": "Coach Report",
 };

@@ -42,6 +42,9 @@ import {
   getActivePerformanceTests,
   performanceTestUnits,
 } from "@/lib/assessmentAccess";
+import { blastTestIds, blastTestLabels, blastTestUnits } from "@/data/blastTesting";
+import { hittraxTestIds, hittraxTestLabels, hittraxTestUnits } from "@/data/hittraxTesting";
+import { buildHittingTestMetrics } from "@/lib/hittingTestMetrics";
 import { localStore } from "@/lib/db/local-store";
 import { buildMovementScores } from "@/lib/movementMetrics";
 import { buildPerformanceMetrics } from "@/lib/performanceMetrics";
@@ -115,6 +118,8 @@ interface CoachSessionContextValue {
   activePerformanceTests: PerformanceTestId[];
   assessmentResults: AssessmentResult[];
   performanceMetrics: MetricItem[];
+  hittraxMetrics: MetricItem[];
+  blastMetrics: MetricItem[];
   movementScores: AssessmentScore[];
   screeningJointMobility: JointMobilityMeasurement[];
   screeningSymmetryIndex: SymmetryIndexEntry[];
@@ -123,6 +128,8 @@ interface CoachSessionContextValue {
   injuryHistory: AthleteInjuryEntry[];
   refreshAssessmentResults: () => Promise<void>;
   savePerformanceResults: (scores: Partial<Record<PerformanceTestId, number>>) => Promise<void>;
+  saveHittraxResults: (scores: Partial<Record<string, number>>) => Promise<void>;
+  saveBlastResults: (scores: Partial<Record<string, number>>) => Promise<void>;
   saveMovementResults: (
     entries: Partial<Record<MovementScreenId, MovementScreenEntryInput>>
   ) => Promise<void>;
@@ -449,6 +456,76 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
       markSaved();
     },
     [activeAssessment, refreshAssessmentHistory, markSaved]
+  );
+
+  const saveHittingModuleResults = useCallback(
+    async (
+      moduleId: "hittrax-testing" | "blast-testing",
+      testIds: readonly string[],
+      units: Record<string, string>,
+      scores: Partial<Record<string, number>>
+    ) => {
+      if (!activeAssessment) {
+        throw new Error("No active assessment session");
+      }
+
+      const entries: SaveAssessmentResultInput[] = testIds.flatMap((testId) => {
+        const value = scores[testId];
+        if (value === undefined || Number.isNaN(value)) return [];
+
+        return [
+          {
+            moduleId,
+            testId,
+            value,
+            unit: units[testId] ?? "",
+          },
+        ];
+      });
+
+      const status = await getSupabaseStatus();
+      setIsSupabaseConnected(status.configured);
+
+      if (status.configured && isUuid(activeAssessment.id)) {
+        const saved = await saveAssessmentResultsAction(activeAssessment.id, moduleId, entries);
+        mirrorModuleResults(activeAssessment.id, moduleId, entries);
+        setAssessmentResults((current) => [
+          ...current.filter((result) => result.moduleId !== moduleId),
+          ...saved,
+        ]);
+        await refreshAssessmentHistory();
+        markSaved();
+        return;
+      }
+
+      const saved = localStore.upsertResults(activeAssessment.id, moduleId, entries);
+      setAssessmentResults((current) => [
+        ...current.filter((result) => result.moduleId !== moduleId),
+        ...saved,
+      ]);
+      await refreshAssessmentHistory();
+      markSaved();
+    },
+    [activeAssessment, refreshAssessmentHistory, markSaved]
+  );
+
+  const saveHittraxResults = useCallback(
+    async (scores: Partial<Record<string, number>>) => {
+      await saveHittingModuleResults(
+        "hittrax-testing",
+        hittraxTestIds,
+        hittraxTestUnits,
+        scores
+      );
+    },
+    [saveHittingModuleResults]
+  );
+
+  const saveBlastResults = useCallback(
+    async (scores: Partial<Record<string, number>>) => {
+      await saveHittingModuleResults("blast-testing", blastTestIds, blastTestUnits, scores);
+    },
+    [saveHittingModuleResults]
   );
 
   const saveMovementResults = useCallback(
@@ -917,6 +994,34 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
     return buildPerformanceMetrics(classification, assessmentResults);
   }, [classification, assessmentResults]);
 
+  const hittraxMetrics = useMemo(
+    () =>
+      buildHittingTestMetrics(
+        "hittrax-testing",
+        assessmentResults,
+        hittraxTestIds.map((id) => ({
+          id,
+          label: hittraxTestLabels[id],
+          unit: hittraxTestUnits[id],
+        }))
+      ),
+    [assessmentResults]
+  );
+
+  const blastMetrics = useMemo(
+    () =>
+      buildHittingTestMetrics(
+        "blast-testing",
+        assessmentResults,
+        blastTestIds.map((id) => ({
+          id,
+          label: blastTestLabels[id],
+          unit: blastTestUnits[id],
+        }))
+      ),
+    [assessmentResults]
+  );
+
   const movementScores = useMemo(
     () => buildMovementScores(assessmentResults),
     [assessmentResults]
@@ -984,6 +1089,8 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
       activePerformanceTests: classification ? getActivePerformanceTests(classification) : [],
       assessmentResults,
       performanceMetrics,
+      hittraxMetrics,
+      blastMetrics,
       movementScores,
       screeningJointMobility,
       screeningSymmetryIndex,
@@ -998,6 +1105,8 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
       lastSavedAt,
       refreshAssessmentResults,
       savePerformanceResults,
+      saveHittraxResults,
+      saveBlastResults,
       saveMovementResults,
       saveScreeningResults,
       saveAthleteGoals,
@@ -1024,6 +1133,8 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
       endSession,
       assessmentResults,
       performanceMetrics,
+      hittraxMetrics,
+      blastMetrics,
       movementScores,
       screeningJointMobility,
       screeningSymmetryIndex,
@@ -1038,6 +1149,8 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
       lastSavedAt,
       refreshAssessmentResults,
       savePerformanceResults,
+      saveHittraxResults,
+      saveBlastResults,
       saveMovementResults,
       saveScreeningResults,
     ]

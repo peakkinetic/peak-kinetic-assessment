@@ -101,6 +101,8 @@ export function getModuleHref(moduleId: AssessmentModuleId): string {
     "movement-screen": "/dashboard/movement-screen",
     "screening-mobility": "/dashboard/screening-mobility",
     "performance-testing": "/dashboard/performance-testing",
+    "hittrax-testing": "/dashboard/hittrax-testing",
+    "blast-testing": "/dashboard/blast-testing",
     "progress-tracking": "/dashboard/progress-tracking",
     "coach-report": "/dashboard/coach-report",
   };

@@ -90,16 +90,14 @@ export const assessmentClassifications: AssessmentClassification[] = [
     label: "Hitting Assessment",
     group: "specialty",
     description:
-      "Rotational athlete profile — movement patterns, mobility, and lower-half power metrics for hitters.",
+      "Hitting athlete profile with Hittrax and Blast metrics, progress tracking, and coach evaluation.",
     modules: [
       "profile",
-      "movement-screen",
-      "screening-mobility",
-      "performance-testing",
+      "hittrax-testing",
+      "blast-testing",
       "progress-tracking",
       "coach-report",
     ],
-    performanceTests: ["ten-yard-sprint", "vertical-jump", "broad-jump", "rsi"],
   },
   {
     id: "pitching",

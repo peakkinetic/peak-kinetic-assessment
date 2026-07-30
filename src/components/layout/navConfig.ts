@@ -5,6 +5,8 @@ import {
   TrendingUp,
   FileText,
   ClipboardList,
+  Crosshair,
+  Zap,
 } from "lucide-react";
 import { GoniometerIcon } from "@/components/icons/GoniometerIcon";
 import type { NavItem } from "@/types";
@@ -46,6 +48,20 @@ export const navItems: NavItem[] = [
     moduleId: "performance-testing",
   },
   {
+    label: "Hittrax Testing",
+    href: "/dashboard/hittrax-testing",
+    icon: "crosshair",
+    description: "Exit velocity & batted ball data",
+    moduleId: "hittrax-testing",
+  },
+  {
+    label: "Blast Testing",
+    href: "/dashboard/blast-testing",
+    icon: "zap",
+    description: "Bat speed & swing metrics",
+    moduleId: "blast-testing",
+  },
+  {
     label: "Progress Tracking",
     href: "/dashboard/progress-tracking",
     icon: "trending-up",
@@ -67,6 +83,8 @@ const iconMap = {
   activity: Activity,
   goniometer: GoniometerIcon,
   timer: Timer,
+  crosshair: Crosshair,
+  zap: Zap,
   "trending-up": TrendingUp,
   "file-text": FileText,
 };

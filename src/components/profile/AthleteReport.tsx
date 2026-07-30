@@ -68,6 +68,8 @@ export function AthleteReport() {
     classification,
     includesModule,
     performanceMetrics,
+    hittraxMetrics,
+    blastMetrics,
     movementScores,
     screeningJointMobility,
     screeningSymmetryIndex,
@@ -167,6 +169,34 @@ export function AthleteReport() {
       <ProfileGoalsSection />
 
       <ProfileInjuryHistorySection />
+
+      {includesModule("hittrax-testing") && (
+        <ReportSection title="Hittrax Testing" subtitle="Batted ball and exit velocity metrics">
+          {hittraxMetrics.length === 0 ? (
+            <EmptySection message="No Hittrax scores recorded for this assessment." />
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {hittraxMetrics.map((metric) => (
+                <StatCard key={metric.label} {...metric} />
+              ))}
+            </div>
+          )}
+        </ReportSection>
+      )}
+
+      {includesModule("blast-testing") && (
+        <ReportSection title="Blast Testing" subtitle="Bat speed and swing mechanics metrics">
+          {blastMetrics.length === 0 ? (
+            <EmptySection message="No Blast scores recorded for this assessment." />
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {blastMetrics.map((metric) => (
+                <StatCard key={metric.label} {...metric} />
+              ))}
+            </div>
+          )}
+        </ReportSection>
+      )}
 
       {includesModule("performance-testing") && (
         <ReportSection

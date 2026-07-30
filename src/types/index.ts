@@ -40,8 +40,29 @@ export type AssessmentModuleId =
   | "movement-screen"
   | "screening-mobility"
   | "performance-testing"
+  | "hittrax-testing"
+  | "blast-testing"
   | "progress-tracking"
   | "coach-report";
+
+export type HittraxTestId =
+  | "max-exit-velocity"
+  | "avg-exit-velocity"
+  | "max-distance"
+  | "launch-angle";
+
+export type BlastTestId =
+  | "avg-bat-speed"
+  | "max-bat-speed"
+  | "avg-attack-angle"
+  | "avg-rotational-acceleration"
+  | "avg-early-connection"
+  | "avg-power-kw"
+  | "max-power-kw"
+  | "avg-time-to-contact"
+  | "avg-peak-hand-speed"
+  | "max-peak-hand-speed"
+  | "avg-vertical-bat-angle";
 
 export type PerformanceTestId =
   | "ten-yard-sprint"
