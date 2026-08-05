@@ -11,6 +11,7 @@ import { BarChart } from "@/components/charts/BarChart";
 import { NationalRankingChart } from "@/components/profile/NationalRankingChart";
 import { ReportSection } from "@/components/profile/ReportSection";
 import { ProfileGoalsSection } from "@/components/profile/ProfileGoalsSection";
+import { ProfileFocusAreasSection } from "@/components/profile/ProfileFocusAreasSection";
 import { ProfileInjuryHistorySection } from "@/components/profile/ProfileInjuryHistorySection";
 import { JointMobilityTable } from "@/components/screening/JointMobilityTable";
 import { HideBarChartsForMiddleSchool } from "@/components/assessment/HideBarChartsForMiddleSchool";
@@ -165,6 +166,8 @@ export function AthleteReport() {
           </div>
         </Card>
       </ReportSection>
+
+      <ProfileFocusAreasSection />
 
       <ProfileGoalsSection />
 

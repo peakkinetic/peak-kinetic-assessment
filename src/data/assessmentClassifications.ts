@@ -90,9 +90,10 @@ export const assessmentClassifications: AssessmentClassification[] = [
     label: "Hitting Assessment",
     group: "specialty",
     description:
-      "Hitting athlete profile with Hittrax and Blast metrics, progress tracking, and coach evaluation.",
+      "Hitting athlete profile with movement screen, Hittrax and Blast metrics, progress tracking, and coach evaluation.",
     modules: [
       "profile",
+      "movement-screen",
       "hittrax-testing",
       "blast-testing",
       "progress-tracking",

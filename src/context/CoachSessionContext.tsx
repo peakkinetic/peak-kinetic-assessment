@@ -19,6 +19,7 @@ import type {
   Athlete,
   AthleteGoal,
   AthleteInjuryEntry,
+  AthleteFocusAreas,
   CreateAthleteInput,
   MetricItem,
   MovementScreenEntryInput,
@@ -65,6 +66,7 @@ import {
 } from "@/lib/progressMetrics";
 import {
   buildAthleteGoals,
+  buildAthleteFocusAreas,
   buildInjuryHistory,
   profileDataToSaveInputs,
 } from "@/lib/athleteProfileData";
@@ -125,6 +127,7 @@ interface CoachSessionContextValue {
   screeningSymmetryIndex: SymmetryIndexEntry[];
   screeningSessionNote: string | null;
   athleteGoals: AthleteGoal[];
+  athleteFocusAreas: AthleteFocusAreas;
   injuryHistory: AthleteInjuryEntry[];
   refreshAssessmentResults: () => Promise<void>;
   savePerformanceResults: (scores: Partial<Record<PerformanceTestId, number>>) => Promise<void>;
@@ -138,6 +141,7 @@ interface CoachSessionContextValue {
     sessionNote?: string;
   }) => Promise<void>;
   saveAthleteGoals: (goals: AthleteGoal[]) => Promise<void>;
+  saveAthleteFocusAreas: (focusAreas: AthleteFocusAreas) => Promise<void>;
   saveInjuryHistory: (entries: AthleteInjuryEntry[]) => Promise<void>;
   assessmentHistory: AssessmentHistoryEntry[];
   progressTrackingMetrics: ProgressMetricView[];
@@ -659,7 +663,8 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
       }
 
       const currentInjuries = buildInjuryHistory(assessmentResults);
-      const savedEntries = profileDataToSaveInputs(goals, currentInjuries);
+      const currentFocusAreas = buildAthleteFocusAreas(assessmentResults);
+      const savedEntries = profileDataToSaveInputs(goals, currentInjuries, currentFocusAreas);
       const status = await getSupabaseStatus();
       setIsSupabaseConnected(status.configured);
 
@@ -697,7 +702,47 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
       }
 
       const currentGoals = buildAthleteGoals(assessmentResults);
-      const savedEntries = profileDataToSaveInputs(currentGoals, entries);
+      const currentFocusAreas = buildAthleteFocusAreas(assessmentResults);
+      const savedEntries = profileDataToSaveInputs(currentGoals, entries, currentFocusAreas);
+      const status = await getSupabaseStatus();
+      setIsSupabaseConnected(status.configured);
+
+      if (status.configured && isUuid(activeAssessment.id)) {
+        const saved = await saveAssessmentResultsAction(
+          activeAssessment.id,
+          "profile",
+          savedEntries
+        );
+        mirrorModuleResults(activeAssessment.id, "profile", savedEntries);
+        setAssessmentResults((current) => [
+          ...current.filter((result) => result.moduleId !== "profile"),
+          ...saved,
+        ]);
+        await refreshAssessmentHistory();
+        markSaved();
+        return;
+      }
+
+      const saved = localStore.upsertResults(activeAssessment.id, "profile", savedEntries);
+      setAssessmentResults((current) => [
+        ...current.filter((result) => result.moduleId !== "profile"),
+        ...saved,
+      ]);
+      await refreshAssessmentHistory();
+      markSaved();
+    },
+    [activeAssessment, assessmentResults, refreshAssessmentHistory, markSaved]
+  );
+
+  const saveAthleteFocusAreas = useCallback(
+    async (focusAreas: AthleteFocusAreas) => {
+      if (!activeAssessment) {
+        throw new Error("No active assessment session");
+      }
+
+      const currentGoals = buildAthleteGoals(assessmentResults);
+      const currentInjuries = buildInjuryHistory(assessmentResults);
+      const savedEntries = profileDataToSaveInputs(currentGoals, currentInjuries, focusAreas);
       const status = await getSupabaseStatus();
       setIsSupabaseConnected(status.configured);
 
@@ -1044,6 +1089,11 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
 
   const athleteGoals = useMemo(() => buildAthleteGoals(assessmentResults), [assessmentResults]);
 
+  const athleteFocusAreas = useMemo(
+    () => buildAthleteFocusAreas(assessmentResults),
+    [assessmentResults]
+  );
+
   const injuryHistory = useMemo(() => buildInjuryHistory(assessmentResults), [assessmentResults]);
 
   const progressTrackingMetrics = useMemo(() => {
@@ -1096,6 +1146,7 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
       screeningSymmetryIndex,
       screeningSessionNote,
       athleteGoals,
+      athleteFocusAreas,
       injuryHistory,
       assessmentHistory,
       progressTrackingMetrics,
@@ -1110,6 +1161,7 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
       saveMovementResults,
       saveScreeningResults,
       saveAthleteGoals,
+      saveAthleteFocusAreas,
       saveInjuryHistory,
     }),
     [
@@ -1140,6 +1192,7 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
       screeningSymmetryIndex,
       screeningSessionNote,
       athleteGoals,
+      athleteFocusAreas,
       injuryHistory,
       assessmentHistory,
       progressTrackingMetrics,

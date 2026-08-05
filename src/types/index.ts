@@ -144,6 +144,11 @@ export interface AthleteInjuryEntry {
   description: string;
 }
 
+export interface AthleteFocusAreas {
+  primary: string;
+  secondary: string;
+}
+
 export interface CoachSessionState {
   athleteId: string;
   assessmentId: string;
