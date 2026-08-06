@@ -7,6 +7,8 @@ import { useCoachSession } from "@/context/CoachSessionContext";
 
 export function ProfileDetailsEditor() {
   const { athlete, updateAthlete } = useCoachSession();
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [height, setHeight] = useState("");
   const [weight, setWeight] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -15,6 +17,8 @@ export function ProfileDetailsEditor() {
 
   useEffect(() => {
     if (!athlete) return;
+    setFirstName(athlete.firstName);
+    setLastName(athlete.lastName);
     setHeight(athlete.height);
     setWeight(athlete.weight);
   }, [athlete]);
@@ -23,16 +27,23 @@ export function ProfileDetailsEditor() {
     event.preventDefault();
     if (!athlete) return;
 
+    if (!firstName.trim() || !lastName.trim()) {
+      setError("First and last name are required.");
+      return;
+    }
+
     setIsSaving(true);
     setError(null);
     setSavedMessage(null);
 
     try {
       await updateAthlete({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
         height: height.trim(),
         weight: weight.trim(),
       });
-      setSavedMessage("Height and weight saved for this athlete.");
+      setSavedMessage("Athlete profile saved.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save profile details.");
     } finally {
@@ -46,10 +57,38 @@ export function ProfileDetailsEditor() {
     <Card className="mb-8">
       <CardHeader
         title="Athlete Details"
-        subtitle="Height and weight are saved to this athlete profile"
+        subtitle="Update the athlete name, height, and weight for this profile"
       />
 
       <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
+        <label className="block text-sm">
+          <span className="mb-1 flex items-center gap-2 font-semibold text-pkp-black">
+            <User className="h-4 w-4 text-pkp-gray-500" />
+            First Name
+          </span>
+          <input
+            type="text"
+            value={firstName}
+            onChange={(event) => setFirstName(event.target.value)}
+            className="w-full rounded-lg border border-pkp-gray-200 px-3 py-2.5"
+            required
+          />
+        </label>
+
+        <label className="block text-sm">
+          <span className="mb-1 flex items-center gap-2 font-semibold text-pkp-black">
+            <User className="h-4 w-4 text-pkp-gray-500" />
+            Last Name
+          </span>
+          <input
+            type="text"
+            value={lastName}
+            onChange={(event) => setLastName(event.target.value)}
+            className="w-full rounded-lg border border-pkp-gray-200 px-3 py-2.5"
+            required
+          />
+        </label>
+
         <label className="block text-sm">
           <span className="mb-1 flex items-center gap-2 font-semibold text-pkp-black">
             <Ruler className="h-4 w-4 text-pkp-gray-500" />

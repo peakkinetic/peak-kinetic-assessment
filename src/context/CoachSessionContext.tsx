@@ -27,11 +27,19 @@ import type {
   SaveAssessmentResultInput,
   ScreeningMobilityEntryInput,
   JointMobilityMeasurement,
+  AssessmentClassificationOverride,
 } from "@/types";
 import {
-  assessmentClassifications,
   getClassificationById,
 } from "@/data/assessmentClassifications";
+import {
+  getMergedClassificationById,
+  mergeAllClassifications,
+} from "@/lib/assessmentClassificationOverrides";
+import {
+  listClassificationOverridesAction,
+  saveClassificationOverrideAction,
+} from "@/app/actions/classifications";
 import { movementScreenCategories, type MovementScreenId } from "@/data/movementScreenCategories";
 import {
   screeningMobilityCategories,
@@ -100,13 +108,16 @@ interface CoachSessionContextValue {
   assessments: AssessmentRecord[];
   athletes: Athlete[];
   classifications: AssessmentClassification[];
+  resolveClassificationById: (classificationId: string) => AssessmentClassification;
   isLoading: boolean;
   isSupabaseConnected: boolean;
   pendingClassificationId: string | null;
   setPendingClassificationId: (classificationId: string | null) => void;
   loadAthletes: () => Promise<void>;
   createAthlete: (input: CreateAthleteInput) => Promise<Athlete>;
-  updateAthlete: (updates: Partial<Pick<Athlete, "height" | "weight" | "age">>) => Promise<Athlete>;
+  updateAthlete: (
+    updates: Partial<Pick<Athlete, "firstName" | "lastName" | "height" | "weight" | "age">>
+  ) => Promise<Athlete>;
   deleteAthlete: (athleteId: string) => Promise<void>;
   startSession: (athleteId: string, classificationId: string, label?: string) => Promise<void>;
   setActiveAssessmentId: (assessmentId: string) => void;
@@ -143,6 +154,9 @@ interface CoachSessionContextValue {
   saveAthleteGoals: (goals: AthleteGoal[]) => Promise<void>;
   saveAthleteFocusAreas: (focusAreas: AthleteFocusAreas) => Promise<void>;
   saveInjuryHistory: (entries: AthleteInjuryEntry[]) => Promise<void>;
+  saveClassificationOverride: (
+    override: AssessmentClassificationOverride
+  ) => Promise<AssessmentClassificationOverride>;
   assessmentHistory: AssessmentHistoryEntry[];
   progressTrackingMetrics: ProgressMetricView[];
   nationalRankProgress: NationalRankProgressView[];
@@ -246,6 +260,48 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
   const [pendingClassificationId, setPendingClassificationIdState] = useState<string | null>(
     null
   );
+  const [classificationOverrides, setClassificationOverrides] = useState<
+    AssessmentClassificationOverride[]
+  >([]);
+
+  const loadClassificationOverrides = useCallback(async () => {
+    const status = await getSupabaseStatus();
+
+    if (status.configured) {
+      try {
+        const overrides = await listClassificationOverridesAction();
+        setClassificationOverrides(overrides);
+        if (localStore.isAvailable()) {
+          for (const override of overrides) {
+            localStore.saveClassificationOverride(override);
+          }
+        }
+        return overrides;
+      } catch {
+        // Fall back to local cache if Supabase table is missing or unreachable.
+      }
+    }
+
+    if (localStore.isAvailable()) {
+      const overrides = localStore.listClassificationOverrides();
+      setClassificationOverrides(overrides);
+      return overrides;
+    }
+
+    setClassificationOverrides([]);
+    return [];
+  }, []);
+
+  const classifications = useMemo(
+    () => mergeAllClassifications(classificationOverrides),
+    [classificationOverrides]
+  );
+
+  const resolveClassificationById = useCallback(
+    (classificationId: string) =>
+      getMergedClassificationById(classificationId, classificationOverrides),
+    [classificationOverrides]
+  );
 
   const setPendingClassificationId = useCallback((classificationId: string | null) => {
     setPendingClassificationIdState(classificationId);
@@ -270,6 +326,7 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
   const hydrateSession = useCallback(async () => {
     setIsLoading(true);
     setPendingClassificationIdState(readPendingClassification());
+    void loadClassificationOverrides();
 
     try {
       const localSnapshot = loadLocalSession();
@@ -339,7 +396,7 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [loadClassificationOverrides]);
 
   useEffect(() => {
     hydrateSession();
@@ -773,6 +830,38 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
     [activeAssessment, assessmentResults, refreshAssessmentHistory, markSaved]
   );
 
+  const saveClassificationOverride = useCallback(
+    async (override: AssessmentClassificationOverride) => {
+      const status = await getSupabaseStatus();
+      setIsSupabaseConnected(status.configured);
+
+      let saved = override;
+
+      if (status.configured) {
+        try {
+          saved = await saveClassificationOverrideAction(override);
+        } catch {
+          // Keep going with local storage if the overrides table is not ready yet.
+        }
+      }
+
+      if (localStore.isAvailable()) {
+        saved = localStore.saveClassificationOverride(saved);
+      }
+
+      setClassificationOverrides((current) => {
+        const next = current.filter((item) => item.classificationId !== saved.classificationId);
+        if (saved.label.trim() || saved.description.trim()) {
+          next.push(saved);
+        }
+        return next;
+      });
+
+      return saved;
+    },
+    []
+  );
+
   const createAthlete = useCallback(
     async (input: CreateAthleteInput) => {
       const status = await getSupabaseStatus();
@@ -798,7 +887,9 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
   );
 
   const updateAthlete = useCallback(
-    async (updates: Partial<Pick<Athlete, "height" | "weight" | "age">>) => {
+    async (
+      updates: Partial<Pick<Athlete, "firstName" | "lastName" | "height" | "weight" | "age">>
+    ) => {
       if (!athlete) {
         throw new Error("No active athlete");
       }
@@ -883,7 +974,7 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
         throw new Error("Athlete not found");
       }
 
-      const classification = getClassificationById(classificationId);
+      const classification = resolveClassificationById(classificationId);
       const assessment = localStore.createAssessment({
         athleteId,
         classificationId,
@@ -900,7 +991,7 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
       setPendingClassificationId(null);
       goToDashboard();
     },
-    [setPendingClassificationId]
+    [resolveClassificationById, setPendingClassificationId]
   );
 
   const refreshAssessments = useCallback(async () => {
@@ -1031,8 +1122,8 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
 
   const classification = useMemo(() => {
     if (!activeAssessment) return null;
-    return getClassificationById(activeAssessment.classificationId);
-  }, [activeAssessment]);
+    return resolveClassificationById(activeAssessment.classificationId);
+  }, [activeAssessment, resolveClassificationById]);
 
   const performanceMetrics = useMemo(() => {
     if (!classification) return [];
@@ -1120,7 +1211,8 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
       classification,
       assessments,
       athletes,
-      classifications: assessmentClassifications,
+      classifications,
+      resolveClassificationById,
       isLoading,
       isSupabaseConnected,
       pendingClassificationId,
@@ -1163,6 +1255,7 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
       saveAthleteGoals,
       saveAthleteFocusAreas,
       saveInjuryHistory,
+      saveClassificationOverride,
     }),
     [
       athlete,
@@ -1170,6 +1263,8 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
       classification,
       assessments,
       athletes,
+      classifications,
+      resolveClassificationById,
       isLoading,
       isSupabaseConnected,
       pendingClassificationId,
@@ -1206,6 +1301,10 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
       saveBlastResults,
       saveMovementResults,
       saveScreeningResults,
+      saveAthleteGoals,
+      saveAthleteFocusAreas,
+      saveInjuryHistory,
+      saveClassificationOverride,
     ]
   );
 

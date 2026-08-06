@@ -4,7 +4,6 @@ import { FormEvent, useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { useCoachSession } from "@/context/CoachSessionContext";
-import { assessmentClassifications } from "@/data/assessmentClassifications";
 import type { AssessmentRecord, AssessmentStatus } from "@/types";
 
 const statusVariant = {
@@ -26,6 +25,7 @@ export function AssessmentHistoryList() {
     setActiveAssessmentId,
     updateAssessment,
     deleteAssessment,
+    resolveClassificationById,
   } = useCoachSession();
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -99,9 +99,7 @@ export function AssessmentHistoryList() {
       {assessments.map((assessment) => {
         const isActive = assessment.id === activeAssessment?.id;
         const isEditing = editingId === assessment.id;
-        const itemClassification = assessmentClassifications.find(
-          (item) => item.id === assessment.classificationId
-        );
+        const itemClassification = resolveClassificationById(assessment.classificationId);
 
         return (
           <div
@@ -170,7 +168,7 @@ export function AssessmentHistoryList() {
                       )}
                     </div>
                     <p className="mt-1 text-xs text-pkp-gray-500">
-                      {itemClassification?.label} · {assessment.date}
+                      {itemClassification.label} · {assessment.date}
                     </p>
                     <Badge variant={statusVariant[assessment.status]} className="mt-2 w-fit">
                       {statusLabel[assessment.status]}

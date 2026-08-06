@@ -1,4 +1,10 @@
-import type { Athlete, AssessmentRecord, AssessmentStatus, SaveAssessmentResultInput } from "@/types";
+import type {
+  Athlete,
+  AssessmentClassificationOverride,
+  AssessmentRecord,
+  AssessmentStatus,
+  SaveAssessmentResultInput,
+} from "@/types";
 import { athlete as seedAthlete } from "@/data/athlete";
 import { assessmentRecords as seedAssessments } from "@/data/assessments";
 import {
@@ -18,12 +24,14 @@ const ATHLETES_KEY = "pkp-local-athletes";
 const ASSESSMENTS_KEY = "pkp-local-assessments";
 const RESULTS_KEY = "pkp-local-assessment-results";
 const SESSION_KEY = "pkp-coach-session";
+const CLASSIFICATION_OVERRIDES_KEY = "pkp-classification-overrides";
 
 export const localStoreKeys = {
   athletes: ATHLETES_KEY,
   assessments: ASSESSMENTS_KEY,
   results: RESULTS_KEY,
   session: SESSION_KEY,
+  classificationOverrides: CLASSIFICATION_OVERRIDES_KEY,
 } as const;
 
 export interface CoachSessionPayload {
@@ -144,7 +152,7 @@ export const localStore = {
 
   updateAthlete(
     athleteId: string,
-    updates: Partial<Pick<Athlete, "height" | "weight" | "age">>
+    updates: Partial<Pick<Athlete, "firstName" | "lastName" | "height" | "weight" | "age">>
   ): Athlete {
     const rows = getAthleteRows();
     const index = rows.findIndex((row) => row.id === athleteId);
@@ -152,11 +160,22 @@ export const localStore = {
       throw new Error("Athlete not found");
     }
 
+    const current = rows[index];
+    const firstName =
+      updates.firstName !== undefined ? updates.firstName.trim() : current.first_name;
+    const lastName = updates.lastName !== undefined ? updates.lastName.trim() : current.last_name;
+
     const nextRow: AthleteRow = {
-      ...rows[index],
-      height: updates.height !== undefined ? updates.height || null : rows[index].height,
-      weight: updates.weight !== undefined ? updates.weight || null : rows[index].weight,
-      age: updates.age !== undefined ? updates.age || null : rows[index].age,
+      ...current,
+      first_name: firstName,
+      last_name: lastName,
+      height: updates.height !== undefined ? updates.height || null : current.height,
+      weight: updates.weight !== undefined ? updates.weight || null : current.weight,
+      age: updates.age !== undefined ? updates.age || null : current.age,
+      headshot_initials:
+        updates.firstName !== undefined || updates.lastName !== undefined
+          ? getInitials(firstName, lastName)
+          : current.headshot_initials,
     };
 
     const nextRows = [...rows];
@@ -343,6 +362,32 @@ export const localStore = {
       nextRows[index] = { ...nextRows[index], ...row };
     }
     writeJson(ASSESSMENTS_KEY, nextRows);
+  },
+
+  listClassificationOverrides(): AssessmentClassificationOverride[] {
+    return readJson<AssessmentClassificationOverride[]>(CLASSIFICATION_OVERRIDES_KEY, []);
+  },
+
+  saveClassificationOverride(
+    override: AssessmentClassificationOverride
+  ): AssessmentClassificationOverride {
+    const rows = readJson<AssessmentClassificationOverride[]>(CLASSIFICATION_OVERRIDES_KEY, []);
+    const nextOverride = {
+      classificationId: override.classificationId,
+      label: override.label.trim(),
+      description: override.description.trim(),
+    };
+    const index = rows.findIndex((item) => item.classificationId === override.classificationId);
+    const nextRows = [...rows];
+
+    if (index === -1) {
+      nextRows.push(nextOverride);
+    } else {
+      nextRows[index] = nextOverride;
+    }
+
+    writeJson(CLASSIFICATION_OVERRIDES_KEY, nextRows);
+    return nextOverride;
   },
 
   subscribeToChanges(onChange: () => void) {

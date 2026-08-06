@@ -5,7 +5,8 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isUuid } from "@/lib/uuid";
 import { athleteToRow, rowToAthlete, rowToAssessment } from "@/lib/db/mappers";
 import type { Athlete, AssessmentRecord, AssessmentStatus } from "@/types";
-import { getClassificationById } from "@/data/assessmentClassifications";
+import { getMergedClassificationById } from "@/lib/assessmentClassificationOverrides";
+import { listClassificationOverridesAction } from "@/app/actions/classifications";
 
 export async function getSupabaseStatus() {
   return { configured: isSupabaseConfigured() };
@@ -51,7 +52,7 @@ export async function createAthleteAction(input: {
 
 export async function updateAthleteAction(
   athleteId: string,
-  updates: Partial<Pick<Athlete, "height" | "weight" | "age">>
+  updates: Partial<Pick<Athlete, "firstName" | "lastName" | "height" | "weight" | "age">>
 ): Promise<Athlete> {
   if (!isSupabaseConfigured()) {
     throw new Error("Supabase is not configured");
@@ -61,12 +62,28 @@ export async function updateAthleteAction(
     throw new Error("This athlete profile is stored locally only.");
   }
 
+  const supabase = createServiceClient();
+  const { data: existing, error: existingError } = await supabase
+    .from("athletes")
+    .select("first_name, last_name")
+    .eq("id", athleteId)
+    .single();
+
+  if (existingError) throw new Error(existingError.message);
+
   const payload: Record<string, string | number | null> = {};
+  if (updates.firstName !== undefined) payload.first_name = updates.firstName.trim();
+  if (updates.lastName !== undefined) payload.last_name = updates.lastName.trim();
   if (updates.height !== undefined) payload.height = updates.height || null;
   if (updates.weight !== undefined) payload.weight = updates.weight || null;
   if (updates.age !== undefined) payload.age = updates.age || null;
 
-  const supabase = createServiceClient();
+  if (updates.firstName !== undefined || updates.lastName !== undefined) {
+    const firstName = updates.firstName ?? existing.first_name;
+    const lastName = updates.lastName ?? existing.last_name;
+    payload.headshot_initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  }
+
   const { data, error } = await supabase
     .from("athletes")
     .update(payload)
@@ -126,7 +143,8 @@ export async function createAssessmentAction(input: {
     throw new Error("Supabase is not configured");
   }
 
-  const classification = getClassificationById(input.classificationId);
+  const overrides = await listClassificationOverridesAction();
+  const classification = getMergedClassificationById(input.classificationId, overrides);
   const label =
     input.label ??
     `${classification.label} — ${new Date().toLocaleDateString("en-US", {

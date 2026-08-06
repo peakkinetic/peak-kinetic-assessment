@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -19,13 +19,22 @@ export default function AssessmentsPage() {
         subtitle={`Past assessments for ${athlete?.firstName} ${athlete?.lastName}`}
         badge={<Badge variant="black">Coach Use Only</Badge>}
         action={
-          <Link
-            href="/coach"
-            className="inline-flex items-center gap-2 rounded-lg bg-pkp-red px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-white hover:bg-pkp-red-dark"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            New Assessment
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/coach/assessment-types"
+              className="inline-flex items-center gap-2 rounded-lg border border-pkp-gray-200 bg-white px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-pkp-gray-600 hover:border-pkp-black hover:text-pkp-black"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Edit Types
+            </Link>
+            <Link
+              href="/coach"
+              className="inline-flex items-center gap-2 rounded-lg bg-pkp-red px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-white hover:bg-pkp-red-dark"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              New Assessment
+            </Link>
+          </div>
         }
       />
 

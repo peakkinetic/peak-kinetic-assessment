@@ -83,6 +83,12 @@ export interface AssessmentClassification {
   performanceTests?: PerformanceTestId[];
 }
 
+export interface AssessmentClassificationOverride {
+  classificationId: string;
+  label: string;
+  description: string;
+}
+
 export type AssessmentStatus = "scheduled" | "in-progress" | "complete";
 
 export interface AssessmentRecord {

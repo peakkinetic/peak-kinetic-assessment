@@ -6,7 +6,6 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight, UserPlus } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { getClassificationById } from "@/data/assessmentClassifications";
 import { useCoachSession } from "@/context/CoachSessionContext";
 import { athleteBelongsToCoach, useCoachAuth } from "@/context/CoachAuthContext";
 
@@ -14,7 +13,8 @@ export function AthleteSessionForm() {
   const searchParams = useSearchParams();
   const classificationId = searchParams.get("classification");
 
-  const { athletes, loadAthletes, createAthlete, startSession } = useCoachSession();
+  const { athletes, loadAthletes, createAthlete, startSession, resolveClassificationById } =
+    useCoachSession();
   const { coach } = useCoachAuth();
 
   const visibleAthletes = athletes.filter((item) => athleteBelongsToCoach(item.coach, coach));
@@ -36,11 +36,11 @@ export function AthleteSessionForm() {
   const classification = useMemo(() => {
     if (!classificationId) return null;
     try {
-      return getClassificationById(classificationId);
+      return resolveClassificationById(classificationId);
     } catch {
       return null;
     }
-  }, [classificationId]);
+  }, [classificationId, resolveClassificationById]);
 
   useEffect(() => {
     loadAthletes();
