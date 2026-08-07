@@ -28,7 +28,10 @@ export async function listClassificationOverridesAction(): Promise<
     .from("assessment_classification_overrides")
     .select("classification_id, label, description");
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.warn("assessment_classification_overrides unavailable:", error.message);
+    return [];
+  }
   return (data ?? []).map(rowToOverride);
 }
 

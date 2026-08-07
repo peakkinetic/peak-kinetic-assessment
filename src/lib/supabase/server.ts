@@ -1,19 +1,22 @@
 import { createClient } from "@supabase/supabase-js";
-import { isSupabaseConfigured } from "./env";
+import { getSupabaseProjectUrl, isSupabaseConfigured } from "./env";
 
 export function createServiceClient() {
   if (!isSupabaseConfigured()) {
     throw new Error("Supabase is not configured. Add credentials to .env.local");
   }
 
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
+  const url = getSupabaseProjectUrl();
+  if (!url) {
+    throw new Error(
+      "NEXT_PUBLIC_SUPABASE_URL must be your https://xxxx.supabase.co project URL."
+    );
+  }
+
+  return createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
       },
-    }
-  );
+    });
 }
