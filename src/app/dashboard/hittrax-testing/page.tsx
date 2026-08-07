@@ -1,7 +1,5 @@
 "use client";
 
-"use client";
-
 import { PageHeader } from "@/components/ui/PageHeader";
 import { AthleteHeader } from "@/components/ui/AthleteHeader";
 import { Badge } from "@/components/ui/Badge";
@@ -28,7 +26,7 @@ export default function HittraxTestingPage() {
     <>
       <PageHeader
         title="Hittrax Testing"
-        subtitle="Batted ball and exit velocity metrics"
+        subtitle="Batted ball metrics rated vs national high school hitter Hittrax benchmarks"
         badge={<Badge variant="red">Hitting</Badge>}
       />
 
@@ -44,6 +42,7 @@ export default function HittraxTestingPage() {
         <HittingTestMetrics
           metrics={hittraxMetrics}
           emptyMessage="No Hittrax scores entered yet. Use the form above to record results."
+          showNationalComparison
         />
       </AssessmentModuleGuard>
     </>

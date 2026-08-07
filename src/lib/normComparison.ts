@@ -57,7 +57,7 @@ export function classifyPerformance(
   return "Below Average";
 }
 
-function getTierScore(tier: PerformanceTier): number {
+export function getTierScore(tier: PerformanceTier): number {
   switch (tier) {
     case "Elite":
       return 5;
@@ -70,7 +70,7 @@ function getTierScore(tier: PerformanceTier): number {
   }
 }
 
-function getDifference(value: number, benchmark: number, higherIsBetter: boolean): number {
+export function getDifference(value: number, benchmark: number, higherIsBetter: boolean): number {
   const raw = value - benchmark;
   return higherIsBetter ? raw : -raw;
 }

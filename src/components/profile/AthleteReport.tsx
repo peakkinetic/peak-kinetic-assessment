@@ -31,6 +31,8 @@ import {
   isScoredAssessment,
 } from "@/lib/utils";
 import { brandColors } from "@/lib/brandColors";
+import { enrichHittraxMetricsWithTiers } from "@/lib/hittraxNormComparison";
+import { HittraxBenchmarkComparison } from "@/components/hitting/HittraxBenchmarkComparison";
 import { splitJointMobilityBySide } from "@/lib/screeningMetrics";
 import type { MetricItem, PerformanceTestId } from "@/types";
 
@@ -97,6 +99,7 @@ export function AthleteReport() {
   const { average: overallMovementScore } = getOverallMovementScore(movementScores);
   const hasMovementScores = movementScores.some((score) => isScoredAssessment(score.score));
   const screeningBySide = splitJointMobilityBySide(screeningJointMobility);
+  const ratedHittraxMetrics = enrichHittraxMetricsWithTiers(hittraxMetrics);
 
   return (
     <article className="athlete-report space-y-10 md:space-y-12">
@@ -174,15 +177,21 @@ export function AthleteReport() {
       <ProfileInjuryHistorySection />
 
       {includesModule("hittrax-testing") && (
-        <ReportSection title="Hittrax Testing" subtitle="Batted ball and exit velocity metrics">
+        <ReportSection
+          title="Hittrax Testing"
+          subtitle="Batted ball metrics vs national high school hitter Hittrax benchmarks"
+        >
           {hittraxMetrics.length === 0 ? (
             <EmptySection message="No Hittrax scores recorded for this assessment." />
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {hittraxMetrics.map((metric) => (
-                <StatCard key={metric.label} {...metric} />
-              ))}
-            </div>
+            <>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {ratedHittraxMetrics.map((metric) => (
+                  <StatCard key={metric.label} {...metric} />
+                ))}
+              </div>
+              <HittraxBenchmarkComparison metrics={hittraxMetrics} />
+            </>
           )}
         </ReportSection>
       )}
