@@ -6,8 +6,16 @@ import { hittraxTierColors } from "@/lib/brandColors";
 import type { NormComparisonResult } from "@/lib/normComparison";
 
 const tierSegments = [
-  { label: "Below Average", color: hittraxTierColors.belowAverage, rangeKey: "needsImprovement" as const },
-  { label: "Average", color: hittraxTierColors.average, rangeKey: "average" as const },
+  {
+    label: "Below Average",
+    color: hittraxTierColors.belowAverage,
+    rangeKey: "needsImprovement" as const,
+  },
+  {
+    label: "Average",
+    color: hittraxTierColors.average,
+    rangeKey: "average" as const,
+  },
   { label: "Good", color: hittraxTierColors.good, rangeKey: "good" as const },
   { label: "Elite", color: hittraxTierColors.elite, rangeKey: "elite" as const },
 ];
@@ -21,7 +29,7 @@ export function HittraxMetricRankChart({ comparison }: HittraxMetricRankChartPro
   const unitSuffix = comparison.unit ? ` ${comparison.unit}` : "";
 
   return (
-    <div className="rounded-xl border border-pkp-gray-200 bg-white p-4">
+    <div className="hittrax-rank-chart rounded-xl border border-pkp-gray-200 bg-white p-4">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-pkp-black">{comparison.label}</p>
@@ -36,8 +44,17 @@ export function HittraxMetricRankChart({ comparison }: HittraxMetricRankChartPro
         <Badge variant={getTierBadgeVariant(comparison.tier)}>{comparison.tier}</Badge>
       </div>
 
-      <div className="relative pb-6 pt-1">
-        <div className="flex h-3 overflow-hidden rounded-full">
+      <div className="relative pb-2 pt-6">
+        <div
+          className="hittrax-rank-marker absolute top-0 z-10 flex w-0 flex-col items-center"
+          style={{ left: `${percentile}%` }}
+          aria-label={`Athlete ranks at the ${comparison.nationalRankPercentile}th percentile`}
+        >
+          <div className="h-4 w-1 rounded-full bg-pkp-black" />
+          <div className="hittrax-rank-marker-tip h-0 w-0 border-x-[5px] border-t-[6px] border-x-transparent border-t-pkp-black" />
+        </div>
+
+        <div className="hittrax-rank-bar flex h-4 overflow-hidden rounded-full border border-pkp-gray-300">
           {tierSegments.map((segment) => (
             <div
               key={segment.label}
@@ -45,15 +62,6 @@ export function HittraxMetricRankChart({ comparison }: HittraxMetricRankChartPro
               style={{ backgroundColor: segment.color }}
             />
           ))}
-        </div>
-
-        <div
-          className="absolute top-0 flex -translate-x-1/2 flex-col items-center"
-          style={{ left: `${percentile}%` }}
-          aria-label={`Athlete ranks at the ${comparison.nationalRankPercentile}th percentile`}
-        >
-          <div className="h-5 w-1 rounded-full bg-pkp-black shadow-sm" />
-          <div className="mt-0.5 h-2.5 w-2.5 rotate-45 bg-pkp-black" />
         </div>
 
         <div className="mt-3 grid grid-cols-4 gap-1">

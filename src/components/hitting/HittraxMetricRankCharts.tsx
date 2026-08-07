@@ -34,12 +34,12 @@ export function HittraxMetricRankCharts({ metrics, gender }: HittraxMetricRankCh
         below.
       </p>
 
-      <div className="mb-4 flex flex-wrap gap-x-5 gap-y-2">
+      <div className="mb-4 flex flex-wrap gap-x-5 gap-y-2 print:hidden">
         {tierLegend.map((item) => (
           <div key={item.label} className="flex items-center gap-2 text-xs text-pkp-gray-600">
             {item.label === "Athlete" ? (
               <span className="inline-flex h-3 w-3 items-center justify-center">
-                <span className="h-2.5 w-2.5 rotate-45 bg-pkp-black" />
+                <span className="hittrax-rank-marker-tip h-0 w-0 border-x-[4px] border-t-[5px] border-x-transparent border-t-pkp-black" />
               </span>
             ) : (
               <span
@@ -52,7 +52,7 @@ export function HittraxMetricRankCharts({ metrics, gender }: HittraxMetricRankCh
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="hittrax-rank-charts-grid grid gap-4 lg:grid-cols-2 print:grid-cols-1">
         {comparison.comparisons.map((item) => (
           <HittraxMetricRankChart key={item.testId} comparison={item} />
         ))}

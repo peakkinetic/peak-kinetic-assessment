@@ -136,4 +136,24 @@
     break-inside: avoid-page;
     page-break-inside: avoid;
   }
+
+  /* Hittrax rank charts: preserve colors, marker, and keep each card on one page */
+  .hittrax-rank-chart {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+
+  .hittrax-rank-bar,
+  .hittrax-rank-bar > *,
+  .hittrax-rank-marker,
+  .hittrax-rank-marker-tip,
+  .hittrax-print-summary,
+  .hittrax-print-summary * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .hittrax-rank-charts-grid {
+    break-inside: auto;
+  }
 }

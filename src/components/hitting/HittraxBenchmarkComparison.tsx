@@ -36,7 +36,7 @@ export function HittraxBenchmarkComparison({ metrics }: HittraxBenchmarkComparis
         action={<Badge variant="black">{athlete.gender}</Badge>}
       />
 
-      <div className="mb-6 overflow-hidden rounded-xl border border-pkp-gray-200 bg-pkp-black p-5">
+      <div className="mb-6 hittrax-print-summary overflow-hidden rounded-xl border border-pkp-gray-200 bg-pkp-black p-5">
         <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/50">
           Overall Hitting Profile
         </p>
