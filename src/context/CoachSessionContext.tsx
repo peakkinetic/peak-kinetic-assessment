@@ -899,6 +899,9 @@ export function CoachSessionProvider({ children }: { children: ReactNode }) {
 
       if (status.configured && isUuid(athlete.id)) {
         const updated = await updateAthleteAction(athlete.id, updates);
+        if (localStore.isAvailable()) {
+          localStore.syncAthlete(updated);
+        }
         setAthlete(updated);
         setAthletes((current) =>
           current.map((item) => (item.id === updated.id ? updated : item))
