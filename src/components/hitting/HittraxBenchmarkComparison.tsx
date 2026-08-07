@@ -8,6 +8,7 @@ import {
   formatSignedDifference,
   getTierBadgeVariant,
 } from "@/lib/normComparison";
+import { HittraxMetricRankCharts } from "@/components/hitting/HittraxMetricRankCharts";
 import { getHittraxNationalComparison } from "@/lib/hittraxNormComparison";
 import { useCoachSession } from "@/context/CoachSessionContext";
 
@@ -46,6 +47,10 @@ export function HittraxBenchmarkComparison({ metrics }: HittraxBenchmarkComparis
         <p className="mt-3 text-xs leading-relaxed text-white/60">
           Elite = 5 · Good = 4 · Average = 3 · Below Average = 2
         </p>
+      </div>
+
+      <div className="mb-8">
+        <HittraxMetricRankCharts metrics={metrics} gender={athlete.gender} />
       </div>
 
       <div className="mb-8">

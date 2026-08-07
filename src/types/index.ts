@@ -57,6 +57,7 @@ export type BlastTestId =
   | "avg-attack-angle"
   | "avg-rotational-acceleration"
   | "avg-early-connection"
+  | "avg-connection-at-impact"
   | "avg-power-kw"
   | "max-power-kw"
   | "avg-time-to-contact"

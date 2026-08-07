@@ -21,13 +21,32 @@ const defaultColors = [brandColors.red, brandColors.black, brandColors.gray, "#5
 
 interface LineChartProps {
   labels: string[];
-  datasets: { label: string; data: number[]; color?: string }[];
+  datasets: {
+    label: string;
+    data: number[];
+    color?: string;
+    dashed?: boolean;
+    pointRadius?: number;
+    tension?: number;
+  }[];
   height?: number;
   fill?: boolean;
   yAxisLabel?: string;
+  minValue?: number;
+  maxValue?: number;
+  valueSuffix?: string;
 }
 
-export function LineChart({ labels, datasets, height = 280, fill = false, yAxisLabel }: LineChartProps) {
+export function LineChart({
+  labels,
+  datasets,
+  height = 280,
+  fill = false,
+  yAxisLabel,
+  minValue,
+  maxValue,
+  valueSuffix,
+}: LineChartProps) {
   const data = {
     labels,
     datasets: datasets.map((ds, i) => ({
@@ -38,12 +57,13 @@ export function LineChart({ labels, datasets, height = 280, fill = false, yAxisL
         ? `${ds.color || defaultColors[i % defaultColors.length]}15`
         : "transparent",
       borderWidth: 2,
-      pointRadius: 4,
-      pointHoverRadius: 6,
+      pointRadius: ds.pointRadius ?? 4,
+      pointHoverRadius: (ds.pointRadius ?? 4) + 2,
       pointBackgroundColor: "#FFFFFF",
       pointBorderWidth: 2,
-      tension: 0.35,
+      tension: ds.tension ?? 0.35,
       fill,
+      borderDash: ds.dashed ? [6, 4] : undefined,
     })),
   };
 
@@ -72,6 +92,15 @@ export function LineChart({ labels, datasets, height = 280, fill = false, yAxisL
         padding: 12,
         cornerRadius: 8,
         displayColors: true,
+        callbacks: valueSuffix
+          ? {
+              label: (context) => {
+                const rawValue = context.parsed.y;
+                if (rawValue == null) return context.dataset.label ?? "";
+                return `${context.dataset.label}: ${rawValue}${valueSuffix}`;
+              },
+            }
+          : undefined,
       },
     },
     scales: {
@@ -81,8 +110,14 @@ export function LineChart({ labels, datasets, height = 280, fill = false, yAxisL
         border: { display: false },
       },
       y: {
+        min: minValue,
+        max: maxValue,
         grid: { color: "#f5f5f5" },
-        ticks: { font: { size: 11 }, color: "#a3a3a3" },
+        ticks: {
+          font: { size: 11 },
+          color: "#a3a3a3",
+          callback: valueSuffix ? (value) => `${value}${valueSuffix}` : undefined,
+        },
         border: { display: false },
         title: yAxisLabel
           ? { display: true, text: yAxisLabel, font: { size: 11 }, color: "#a3a3a3" }
